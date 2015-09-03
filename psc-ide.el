@@ -19,7 +19,7 @@
 ;; TODO localise
 (setq psc-ide-command-load     "load")
 (setq psc-ide-command-cwd      "cwd")
-(setq psc-ide-command-complete "completion")
+(setq psc-ide-command-complete "complete")
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
