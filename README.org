@@ -1,0 +1,11 @@
+#+title: psc-ide-emacs
+
+* Usage
+
+- Start ~psc-ide-server~ in your purescript project dir.
+- Evaluate the ~psc-ide.el~ buffer.
+- Set the various config variables, especially the paths to the ~psc-ide~ and ~psc-ide-server~ executables.
+- Visit a ~.purs~ buffer inside your PureScript project.
+- Do ~M-x purescript-mode~.
+- Do ~M-x company-mode~.
+- Put your cursor to the right of an identifier and do ~M-x company-complete~.
