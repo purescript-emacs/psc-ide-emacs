@@ -58,7 +58,6 @@
 
 (defun psc-ide-ask-project-dir ()
   "Ask psc-ide-server for the project dir."
-  ;; (replace-regexp-in-string "[\"\n]" "" (psc-ide-send psc-ide-command-cwd))
   (psc-ide-cleanup-shell-output (psc-ide-send psc-ide-command-cwd))
 )
 
