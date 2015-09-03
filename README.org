@@ -1,5 +1,7 @@
 #+title: psc-ide-emacs
 
+Very early stage Emacs integration for [[https://github.com/kRITZCREEK/psc-ide][kRITZCREEK/psc-ide]].
+
 * Usage
 
 - Start ~psc-ide-server~ in your purescript project dir.
