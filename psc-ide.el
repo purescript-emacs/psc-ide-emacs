@@ -1,5 +1,4 @@
 (require 'company)
-(require 'dash) ;; standard in emacs 25.x?
 (require 'purescript-mode) ;; purescript-ident-at-point
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -31,7 +30,7 @@
   (interactive (list 'interactive))
 
   (case command
-    (interactive (company-begin-backend 'company-sample-backend))
+    (interactive (company-begin-backend 'company-psc-ide-backend))
 
     (prefix (and (eq major-mode 'purescript-mode)
                  (company-grab-symbol)
