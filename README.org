@@ -7,6 +7,7 @@ Very early stage Emacs integration for [[https://github.com/kRITZCREEK/psc-ide][
 * Usage
 
 - Start ~psc-ide-server~ in your purescript project dir.
+- Load the modules you want to use as completion sources: ~echo "load Prelude" | psc-ide~.
 - Evaluate the ~psc-ide.el~ buffer.
 - Set the various config variables, especially the paths to the ~psc-ide~ and ~psc-ide-server~ executables.
 - Visit a ~.purs~ buffer inside your PureScript project.
