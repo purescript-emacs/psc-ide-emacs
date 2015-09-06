@@ -1,3 +1,5 @@
+(provide 'psc-ide)
+
 (require 'company)
 (require 'purescript-mode) ;; purescript-ident-at-point
 
@@ -19,7 +21,7 @@
 (setq psc-ide-command-load     "load")
 (setq psc-ide-command-cwd      "cwd")
 (setq psc-ide-command-complete "complete")
-
+(setq psc-ide-command-show-type "typeLookup")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -44,6 +46,14 @@
   "Complete prefix string using psc-ide."
   (interactive)
    (psc-ide-complete-impl (purescript-ident-at-point))
+)
+
+(defun psc-ide-show-type ()
+  "Show type of the symbol under cursor"
+  (interactive)
+  ;; It should be 'purescript-ident-at-point' according to your code, but how about using thing-at-point and removing
+  ;; the dependency to purescript-mode?
+  (psc-ide-show-type-impl (thing-at-point 'symbol t)) 
 )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -75,6 +85,12 @@
      )
     ", "))
   )
+
+(defun psc-ide-show-type-impl (ident)
+  "Show type."
+  (message (psc-ide-cleanup-shell-output (psc-ide-send (concat psc-ide-command-show-type " " ident))))
+)  
+
 
 (add-to-list 'company-backends 'company-psc-ide-backend)
 
