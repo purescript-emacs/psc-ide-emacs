@@ -1,3 +1,5 @@
+(provide 'psc-ide)
+
 (require 'company)
 (require 'purescript-mode) ;; purescript-ident-at-point
 
