@@ -12,6 +12,7 @@ Further two steps will be automated:
 
 Add following into your ~/.emacs :
 
+#+BEGIN_SRC Emacs Lisp
 
     (add-to-list 'load-path "~/.emacs.d/lisp/psc-ide-emacs/") ;; specify the path to the plugin directory
     (require 'psc-ide)
@@ -25,6 +26,7 @@ Add following into your ~/.emacs :
     (define-key purescript-mode-map (kbd "C-<SPC>") 'company-complete)
     (setq psc-ide-executable "/path/to/psc-ide") ;; specify path to the 'psc-ide' executable
 
+#+END_SRC
 
 
 - Visit a ~.purs~ buffer inside your PureScript project.
