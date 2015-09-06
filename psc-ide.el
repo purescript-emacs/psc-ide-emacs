@@ -71,7 +71,7 @@
         )
     (split-string
      (psc-ide-cleanup-shell-output
-       (psc-ide-send (concat psc-ide-command-complete " " prefix))
+       (psc-ide-send (concat psc-ide-command-complete " " prefix " Project"))
      )
     ", "))
   )
