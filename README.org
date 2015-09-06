@@ -12,20 +12,20 @@ Further two steps will be automated:
 
 Add following into your ~/.emacs :
 
-```
-(add-to-list 'load-path "~/.emacs.d/lisp/psc-ide-emacs/") ;; specify the path to the plugin directory
-(require 'psc-ide)
 
-(add-hook 'purescript-mode-hook
+    (add-to-list 'load-path "~/.emacs.d/lisp/psc-ide-emacs/") ;; specify the path to the plugin directory
+    (require 'psc-ide)
+
+    (add-hook 'purescript-mode-hook
           (lambda ()
               (add-to-list 'company-backends 'company-psc-ide-backend)
               (company-mode)
               (message "Purescript IDE enabled")
           ))
-(define-key purescript-mode-map (kbd "C-<SPC>") 'company-complete)
-(setq psc-ide-executable "/path/to/psc-ide") ;; specify path to the 'psc-ide' executable
+    (define-key purescript-mode-map (kbd "C-<SPC>") 'company-complete)
+    (setq psc-ide-executable "/path/to/psc-ide") ;; specify path to the 'psc-ide' executable
 
 
-```
+
 - Visit a ~.purs~ buffer inside your PureScript project.
 - Put your cursor to the right of an identifier and do ~M-x company-complete~ or press Control-Space. 
