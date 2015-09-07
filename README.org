@@ -6,25 +6,30 @@ Very early stage Emacs integration for [[https://github.com/kRITZCREEK/psc-ide][
 
 * Installation
 
-Add following into your =~/.emacs=:
+Add the following to your =~/.emacs=:
 
-#+BEGIN_SRC Emacs Lisp
-    (add-to-list 'load-path "~/.emacs.d/lisp/psc-ide-emacs/") ;; specify the path to the plugin directory
-    (require 'psc-ide)
+#+BEGIN_SRC elisp
+;; specify the path to the plugin directory
+(add-to-list 'load-path "~/.emacs.d/lisp/psc-ide-emacs/")
 
-    (add-hook 'purescript-mode-hook
-          (lambda ()
-              (add-to-list 'company-backends 'company-psc-ide-backend)
-              (company-mode)
-              (message "Purescript IDE enabled")
-          ))
-    (define-key purescript-mode-map (kbd "C-<SPC>") 'company-complete)
-    (setq psc-ide-executable "/path/to/psc-ide") ;; specify path to the 'psc-ide' executable
+;; specify path to the 'psc-ide' executable
+(customize-set-variable 'psc-ide-executable "/path/to/psc-ide")
+
+(require 'psc-ide)
+
+(add-hook 'purescript-mode-hook
+      (lambda ()
+          (add-to-list 'company-backends 'company-psc-ide-backend)
+          (company-mode)
+          (message "Purescript IDE enabled")
+      ))
+(define-key purescript-mode-map (kbd "C-<SPC>") 'company-complete)
 #+END_SRC
 
 * Usage
 
-The first two steps will be automated:
+The first two steps will be automated in the future:
+
 - Start ~psc-ide-server~ in your purescript project dir.
 - Load the modules you want to use as completion sources: ~echo "load Prelude" | psc-ide~.
 - Visit a ~.purs~ buffer inside your PureScript project.
