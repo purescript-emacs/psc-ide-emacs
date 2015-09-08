@@ -33,7 +33,7 @@ Add following into your ~/.emacs :
 
 Start hacking!
 
-Available keybindings:
+* Available keybindings:
 
 - C-c C-s -- psc-ide-server -- starts the server
 - C-c C-l -- psc-ide-load-module -- loads the module
