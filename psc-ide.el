@@ -4,7 +4,7 @@
 
 (require 'company)
 (require 'psc-ide-backported)
-
+(require 'json)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; psc-ide-mode definition
@@ -41,15 +41,76 @@
   :group 'psc-ide
   :type  'string)
 
+(defcustom psc-ide-completion-matcher "flex"
+  "The method used for completions."
+  :options '("flex" "prefix")
+  :group 'psc-ide
+  :type  'string)
+
 ;; TODO localise
-(setq psc-ide-command-load     "load")
-(setq psc-ide-command-cwd      "cwd")
-(setq psc-ide-command-complete "complete")
-(setq psc-ide-command-show-type "typeLookup")
+(setq psc-ide-command-cwd (json-encode (list :command "cwd")))
+
+(defun psc-ide-command-load (modules deps)
+  (json-encode
+   (list :command "load"
+         :params (list
+                  :modules modules
+                  :dependencies deps
+                  )
+         )
+   )
+  )
+
+(defun psc-ide-command-show-type (filters search)
+  (json-encode
+   (list :command "type"
+         :params (list
+                  :filters filters
+                  :search search
+                 )
+         )
+   )
+  )
+
+(defun psc-ide-command-complete (filters search)
+  (json-encode
+   (list :command "complete"
+         :params (list
+                  :filters filters
+                  :matcher (list
+                            :matcher psc-ide-completion-matcher
+                            :params (list
+                                     :search search
+                                     )
+                            ))
+         )
+   )
+  )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Interactive.
+
+(defun psc-ide-annotation (s)
+  (format " (%s)" (get-text-property 0 :module s))
+  )
+
+(defun psc-ide-meta (s)
+  (format "(%s)" (get-text-property 0 :type s))
+  )
+
+(setq company-tooltip-align-annotations t)
+
+(defun company-psc-ide-frontend (command)
+  (case command
+    (post-command (and (eq major-mode 'purescript-mode)
+                       (message
+                        (get-text-property 0 :type
+                                           (nth company-selection company-candidates)
+                                           ))
+                       ))
+    )
+  )
 
 (defun company-psc-ide-backend (command &optional arg &rest ignored)
   "The psc-ide backend for 'company-mode'."
@@ -64,6 +125,11 @@
                  ))
 
     (candidates (psc-ide-complete-impl arg))
+
+    (sorted t)
+
+    (annotation (psc-ide-annotation arg))
+    (meta (psc-ide-meta arg))
 ))
 
 (defun psc-ide-server (dir-name)
@@ -87,7 +153,7 @@
 (defun psc-ide-show-type ()
   "Show type of the symbol under cursor"
   (interactive)
-  (psc-ide-show-type-impl (psc-ide-ident-at-point)) 
+  (psc-ide-show-type-impl (psc-ide-ident-at-point))
 )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -101,39 +167,46 @@
 
 (defun psc-ide-ask-project-dir ()
   "Ask psc-ide-server for the project dir."
-  (psc-ide-cleanup-shell-output (psc-ide-send psc-ide-command-cwd))
+  (psc-ide-send psc-ide-command-cwd)
 )
 
 (defun psc-ide-load-module-impl (module-name)
-  "Load PureScript module."
-  (psc-ide-send (concat psc-ide-command-load " " module-name))
-)
+  "Load PureScript module and its dependencies."
+  (psc-ide-send (psc-ide-command-load [] (list module-name)))
+  )
 
 (defun psc-ide-complete-impl (prefix)
   "Complete."
-  (let ((default-directory (psc-ide-ask-project-dir))
-        )
-    (split-string
-     (psc-ide-cleanup-shell-output
-       (psc-ide-send (concat psc-ide-command-complete " " prefix " Project"))
+  (mapcar
+   (lambda (x)
+     (let ((completion (cdr (assoc 'identifier x)))
+           (type (cdr (assoc 'type x)))
+           (module (cdr (assoc 'module x))))
+       (add-text-properties 0 1
+          (list :type type :module module) completion
+          )
+       completion
+       )
      )
-    ", "))
+   (json-read-from-string
+    (psc-ide-send (psc-ide-command-complete [] prefix))
+    )
+   )
   )
 
 (defun psc-ide-show-type-impl (ident)
   "Show type."
-  (message (psc-ide-cleanup-shell-output (psc-ide-send (concat psc-ide-command-show-type " " ident))))
-)  
+  (let ((first-result (aref
+                       (json-read-from-string
+                        (psc-ide-send (psc-ide-command-show-type [] ident))) 0)))
+
+    (message (cdr (assoc 'type first-result)))
+    )
+)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Utilities
 
-
-(defun psc-ide-cleanup-shell-output (str)
-  (replace-regexp-in-string "[\"\n]" "" str)
-)
-
-
-;;(add-to-list 'company-backends 'company-psc-ide-backend)
-
+(add-to-list 'company-backends 'company-psc-ide-backend)
+(add-to-list 'company-frontends 'company-psc-ide-frontend)
