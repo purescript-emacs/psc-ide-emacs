@@ -47,70 +47,10 @@
   :group 'psc-ide
   :type  'string)
 
-;; TODO localise
-(setq psc-ide-command-cwd (json-encode (list :command "cwd")))
-
-(defun psc-ide-command-load (modules deps)
-  (json-encode
-   (list :command "load"
-         :params (list
-                  :modules modules
-                  :dependencies deps
-                  )
-         )
-   )
-  )
-
-(defun psc-ide-command-show-type (filters search)
-  (json-encode
-   (list :command "type"
-         :params (list
-                  :filters filters
-                  :search search
-                 )
-         )
-   )
-  )
-
-(defun psc-ide-command-complete (filters search)
-  (json-encode
-   (list :command "complete"
-         :params (list
-                  :filters filters
-                  :matcher (list
-                            :matcher psc-ide-completion-matcher
-                            :params (list
-                                     :search search
-                                     )
-                            ))
-         )
-   )
-  )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Interactive.
-
-(defun psc-ide-annotation (s)
-  (format " (%s)" (get-text-property 0 :module s))
-  )
-
-(defun psc-ide-meta (s)
-  (format "(%s)" (get-text-property 0 :type s))
-  )
-
-(setq company-tooltip-align-annotations t)
-
-(defun company-psc-ide-frontend (command)
-  (case command
-    (post-command (and (eq major-mode 'purescript-mode)
-                       (message
-                        (get-text-property 0 :type
-                                           (nth company-selection company-candidates)
-                                           ))
-                       ))
-    )
-  )
 
 (defun company-psc-ide-backend (command &optional arg &rest ignored)
   "The psc-ide backend for 'company-mode'."
@@ -158,6 +98,41 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
+;; Commands.
+
+;; TODO localise
+(setq psc-ide-command-cwd (json-encode (list :command "cwd")))
+
+(defun psc-ide-command-load (modules deps)
+  (json-encode
+   (list :command "load"
+         :params (list
+                  :modules modules
+                  :dependencies deps )))
+)
+
+(defun psc-ide-command-show-type (filters search)
+  (json-encode
+   (list :command "type"
+         :params (list
+                  :filters filters
+                  :search search )))
+)
+
+(defun psc-ide-command-complete (filters search)
+  (json-encode
+   (list :command "complete"
+         :params (list
+                  :filters filters
+                  :matcher (list
+                            :matcher psc-ide-completion-matcher
+                            :params (list
+                                     :search search
+                                     )))))
+)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
 ;; Non-interactive.
 
 (defun psc-ide-send (cmd)
@@ -182,27 +157,42 @@
      (let ((completion (cdr (assoc 'identifier x)))
            (type (cdr (assoc 'type x)))
            (module (cdr (assoc 'module x))))
-       (add-text-properties 0 1
-          (list :type type :module module) completion
-          )
+       (add-text-properties 0 1 (list :type type :module module) completion)
        completion
-       )
-     )
+       ))
+   
    (json-read-from-string
-    (psc-ide-send (psc-ide-command-complete [] prefix))
-    )
-   )
-  )
+    (psc-ide-send (psc-ide-command-complete [] prefix))))
+)
 
 (defun psc-ide-show-type-impl (ident)
   "Show type."
-  (let ((first-result (aref
+  (let* ((resp (psc-ide-send (psc-ide-command-show-type [] ident)))
+         (first-result (aref
                        (json-read-from-string
-                        (psc-ide-send (psc-ide-command-show-type [] ident))) 0)))
+                        resp) 0)))
 
-    (message (cdr (assoc 'type first-result)))
-    )
+    (message (cdr (assoc 'type first-result))))
 )
+
+(defun psc-ide-annotation (s)
+  (format " (%s)" (get-text-property 0 :module s))
+)
+
+(defun psc-ide-meta (s)
+  (format "(%s)" (get-text-property 0 :type s))
+)
+
+(setq company-tooltip-align-annotations t)
+
+(defun company-psc-ide-frontend (command)
+  (case command
+    (post-command (and (eq major-mode 'purescript-mode)
+                       (message
+                        (get-text-property 0 :type
+                                           (nth company-selection company-candidates))))))
+)
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
