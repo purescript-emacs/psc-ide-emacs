@@ -99,7 +99,7 @@
 (defun psc-ide-show-type ()
   "Show type of the symbol under cursor"
   (interactive)
-  (psc-ide-show-type-impl (psc-ide-ident-at-point))
+  (message (psc-ide-show-type-impl (psc-ide-ident-at-point)))
 )
 
 
@@ -150,7 +150,7 @@
                        (unwrap-result (json-read-from-string
                         resp) ) 0)))
 
-    (message (cdr (assoc 'type first-result))))
+    (cdr (assoc 'type first-result)))
 )
 
 (defun psc-ide-annotation (s)
