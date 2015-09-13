@@ -74,3 +74,10 @@
                                     :maxDist max-dist))
 )
 
+(defun unwrap-result (res)
+  "Unwraps the result from psc-ide and in case of an error throws it"
+  (let ((result-type (cdr (assoc 'resultType res)))
+        (result (cdr (assoc 'result res))))
+    (if (string= result-type "error") (error "%s" result) result)
+    )
+  )
