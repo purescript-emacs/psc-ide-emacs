@@ -21,7 +21,7 @@
   "psc-ide-mode definition"
   :lighter " psc-ide"
   :keymap (let ((map (make-sparse-keymap)))
-            (define-key map (kbd "C-c C-s") 'psc-ide-server)
+            (define-key map (kbd "C-c C-s") 'psc-ide-server-start)
             (define-key map (kbd "C-c C-l") 'psc-ide-load-module)
             (define-key map (kbd "C-<SPC>") 'company-complete)
             (define-key map (kbd "C-c C-t") 'psc-ide-show-type)
@@ -77,10 +77,11 @@
     (meta (psc-ide-meta arg))
 ))
 
-(defun psc-ide-server (dir-name)
-  "Starts psc-ide-server"
-  (interactive "DProject directory: ")
-  (start-process "*psc-ide-server*" "*psc-ide-server*" psc-ide-server-executable "-d" dir-name)
+(defun psc-ide-server-start (dir-name)
+  "Start 'psc-ide-server'."
+  (interactive (list (read-directory-name "Project root? "
+                                          (psc-ide-suggest-project-dir))))
+  (psc-ide-server-start-impl dir-name)
 )
 
 (defun psc-ide-load-module (module-name)
@@ -114,6 +115,11 @@
 (defun psc-ide-ask-project-dir ()
   "Ask psc-ide-server for the project dir."
   (psc-ide-send psc-ide-command-cwd)
+)
+
+(defun psc-ide-server-start-impl (dir-name)
+  "Start psc-ide-server."
+  (start-process "*psc-ide-server*" "*psc-ide-server*" psc-ide-server-executable "-d" dir-name)
 )
 
 (defun psc-ide-load-module-impl (module-name)
@@ -153,6 +159,11 @@
 (defun psc-ide-meta (s)
   (format "(%s)" (get-text-property 0 :type s))
 )
+
+(defun psc-ide-suggest-project-dir ()
+  (if (fboundp 'projectile-project-root)
+      (projectile-project-root)
+      (file-name-directory (buffer-file-name))))
 
 (setq company-tooltip-align-annotations t)
 
