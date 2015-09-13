@@ -45,18 +45,18 @@
 
 (defun filter-exact (filter-str)
   (generic-filter "exact" (list :search filter-str))
-)  
+)
 
 (defun filter-prefix (prefix-str)
   (generic-filter "prefix" (list :search prefix-str))
 )
 
 (defun filter-modules (modules-list)      ;; modules without dependencies
-  (generic-filter "modules" (list :search modules-list))
+  (generic-filter "modules" (list :modules modules-list))
 )
 
 (defun filter-dependencies (modules-list) ;; modules with dependencies
-  (generic-filter "dependencies" (list :search modules-list))
+  (generic-filter "dependencies" (list :modules modules-list))
 )
 
 
