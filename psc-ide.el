@@ -1,10 +1,15 @@
+;;; Dependencies:
+;;; * company.el
+;;; * json.el
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Imports
 
 (require 'company)
 (require 'psc-ide-backported)
-(require 'json)
+(require 'psc-ide-protocol)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; psc-ide-mode definition
@@ -96,40 +101,6 @@
   (psc-ide-show-type-impl (psc-ide-ident-at-point))
 )
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;; Commands.
-
-;; TODO localise
-(setq psc-ide-command-cwd (json-encode (list :command "cwd")))
-
-(defun psc-ide-command-load (modules deps)
-  (json-encode
-   (list :command "load"
-         :params (list
-                  :modules modules
-                  :dependencies deps )))
-)
-
-(defun psc-ide-command-show-type (filters search)
-  (json-encode
-   (list :command "type"
-         :params (list
-                  :filters filters
-                  :search search )))
-)
-
-(defun psc-ide-command-complete (filters search)
-  (json-encode
-   (list :command "complete"
-         :params (list
-                  :filters filters
-                  :matcher (list
-                            :matcher psc-ide-completion-matcher
-                            :params (list
-                                     :search search
-                                     )))))
-)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -162,7 +133,7 @@
        ))
    
    (json-read-from-string
-    (psc-ide-send (psc-ide-command-complete [] prefix))))
+    (psc-ide-send (psc-ide-command-complete [] (matcher-flex prefix)))))
 )
 
 (defun psc-ide-show-type-impl (ident)
