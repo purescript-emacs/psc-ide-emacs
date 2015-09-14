@@ -1,6 +1,16 @@
-;;; Dependencies:
-;;; * company.el
-;;; * json.el
+;;; psc-ide.el --- Minor mode for PureScript's psc-ide tool.
+
+;; Copyright (C) 2015 The psc-ide-emacs authors
+
+;; Author   : Erik Post <erik@shinsetsu.nl>
+;;            Dmitry Bushenko <d.bushenko@gmail.com>
+;;            Christoph Hegemann
+;; Homepage : https://github.com/epost/psc-ide-emacs
+;; Version  : 0.1.0
+;; Keywords : languages
+;;
+;;; Code:
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -179,3 +189,5 @@
 
 (add-to-list 'company-backends 'company-psc-ide-backend)
 (add-to-list 'company-frontends 'company-psc-ide-frontend)
+
+;;; psc-ide.el ends here
