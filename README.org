@@ -18,19 +18,15 @@ Add the following to your =~/.emacs=:
 (require 'psc-ide)
 
 (add-hook 'purescript-mode-hook
-      (lambda ()
-          (add-to-list 'company-backends 'company-psc-ide-backend)
-          (company-mode)
-          (message "Purescript IDE enabled")
-      ))
-(define-key purescript-mode-map (kbd "C-<SPC>") 'company-complete)
+  (lambda ()
+    (psc-ide-mode)
+    (company-mode)))
 #+END_SRC
 
 * Usage
 
-The first two steps will be automated in the future:
-
-- Start ~psc-ide-server~ in your purescript project dir (~C-c C-s~).
+- Optional: enable ~projectile-mode~ so ~psc-ide~ can find your PureScript project's root dir.
+- Do ~psc-ide-server-start~ (~C-c C-s~) and confirm the project dir.
 - Load the modules you want to use as completion sources (~C-c C-l~).
 - Visit a ~.purs~ buffer inside your PureScript project.
 - Put your cursor to the right of an identifier and press ~C-<SPC>~ to suggest completions.
@@ -38,9 +34,9 @@ The first two steps will be automated in the future:
 
 ** Keybindings
 
-| key       | function              |
-|-----------+-----------------------|
-| ~C-c C-s~ | ~psc-ide-server~      |
-| ~C-c C-l~ | ~psc-ide-load-module~ |
-| ~C-<SPC>~ | ~company-complete~    |
-| ~C-c C-t~ | ~psc-ide-show-type~   |
+| key       | function               |
+|-----------+------------------------|
+| ~C-c C-s~ | ~psc-ide-server-start~ |
+| ~C-c C-l~ | ~psc-ide-load-module~  |
+| ~C-<SPC>~ | ~company-complete~     |
+| ~C-c C-t~ | ~psc-ide-show-type~    |
