@@ -69,7 +69,7 @@
     (sorted t)
 
     (annotation (psc-ide-annotation arg))
-    (meta (psc-ide-meta arg))
+    (meta arg)
 ))
 
 (defun psc-ide-server (dir-name)
