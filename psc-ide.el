@@ -7,6 +7,7 @@
 ;;            Christoph Hegemann
 ;; Homepage : https://github.com/epost/psc-ide-emacs
 ;; Version  : 0.1.0
+;; Package-Requires: ((dash "2.11.0") (company "0.8.7"))
 ;; Keywords : languages
 ;;
 ;;; Code:
