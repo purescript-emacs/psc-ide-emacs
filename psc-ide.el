@@ -131,8 +131,9 @@
 
 (defun psc-ide-load-module-impl (module-name)
   "Load PureScript module and its dependencies."
-  (unwrap-result (json-read-from-string
-                  (psc-ide-send (psc-ide-command-load [] (list module-name))))))
+  (psc-ide-unwrap-result (json-read-from-string
+                          (psc-ide-send (psc-ide-command-load
+                                         [] (list module-name))))))
 
 (defun psc-ide-complete-impl (prefix)
   "Complete."
@@ -144,15 +145,16 @@
        (add-text-properties 0 1 (list :type type :module module) completion)
        completion))
 
-   (unwrap-result (json-read-from-string
-    (psc-ide-send (psc-ide-command-complete [] (matcher-flex prefix)))))))
+   (psc-ide-unwrap-result (json-read-from-string
+                           (psc-ide-send (psc-ide-command-complete
+                                          [] (psc-ide-matcher-flex prefix)))))))
 
 (defun psc-ide-show-type-impl (ident)
   "Show type."
   (let* ((resp (psc-ide-send (psc-ide-command-show-type [] ident)))
          (first-result (aref
-                        (unwrap-result (json-read-from-string
-                                        resp)) 0)))
+                        (psc-ide-unwrap-result (json-read-from-string
+                                                resp)) 0)))
 
     (cdr (assoc 'type first-result))))
 
