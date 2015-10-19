@@ -1,5 +1,3 @@
-(provide 'psc-ide-protocol)
-
 (require 'json)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -68,3 +66,5 @@
   (let ((result-type (cdr (assoc 'resultType res)))
         (result (cdr (assoc 'result res))))
     (if (string= result-type "error") (error "%s" result) result)))
+
+(provide 'psc-ide-protocol)

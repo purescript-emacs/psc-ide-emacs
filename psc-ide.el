@@ -29,8 +29,6 @@
 ;;
 ;; psc-ide-mode definition
 
-(provide 'psc-ide)
-
 ;;;###autoload
 (define-minor-mode psc-ide-mode
   "psc-ide-mode definition"
@@ -182,5 +180,7 @@
 
 (add-to-list 'company-backends 'company-psc-ide-backend)
 (add-to-list 'company-frontends 'company-psc-ide-frontend)
+
+(provide 'psc-ide)
 
 ;;; psc-ide.el ends here

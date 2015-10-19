@@ -1,5 +1,3 @@
-(provide 'psc-ide-backported)
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Ported from purescript-mode
@@ -52,3 +50,5 @@ May return a qualified name."
           (setq start (point)))
         ;; This is it.
         (cons start end)))))
+
+(provide 'psc-ide-backported)
