@@ -88,33 +88,28 @@
 
     (sorted t)
 
-    (annotation (psc-ide-annotation arg))
-))
+    (annotation (psc-ide-annotation arg))))
 
 (defun psc-ide-server-start (dir-name)
   "Start 'psc-ide-server'."
   (interactive (list (read-directory-name "Project root? "
                                           (psc-ide-suggest-project-dir))))
-  (psc-ide-server-start-impl dir-name)
-)
+  (psc-ide-server-start-impl dir-name))
 
 (defun psc-ide-load-module (module-name)
   "Provide module to load"
   (interactive (list (read-string "Module: " (car (split-string (buffer-name) "\\.")))) )
-  (psc-ide-load-module-impl module-name)
-)
+  (psc-ide-load-module-impl module-name))
 
 (defun psc-ide-complete ()
   "Complete prefix string using psc-ide."
   (interactive)
-  (psc-ide-complete-impl (psc-ide-ident-at-point))
-)
+  (psc-ide-complete-impl (psc-ide-ident-at-point)))
 
 (defun psc-ide-show-type ()
   "Show type of the symbol under cursor"
   (interactive)
-  (message (psc-ide-show-type-impl (psc-ide-ident-at-point)))
-)
+  (message (psc-ide-show-type-impl (psc-ide-ident-at-point))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -123,24 +118,23 @@
 
 (defun psc-ide-send (cmd)
   "Send a command to psc-ide."
-  (shell-command-to-string (concat "echo '" cmd "' | " psc-ide-executable))
-)
+  (shell-command-to-string (concat "echo '" cmd "' | " psc-ide-executable)))
 
 (defun psc-ide-ask-project-dir ()
   "Ask psc-ide-server for the project dir."
-  (psc-ide-send psc-ide-command-cwd)
-)
+  (psc-ide-send psc-ide-command-cwd))
 
 (defun psc-ide-server-start-impl (dir-name)
   "Start psc-ide-server."
-  (start-process "*psc-ide-server*" "*psc-ide-server*" psc-ide-server-executable "-d" dir-name)
-)
+  (start-process "*psc-ide-server*"
+                 "*psc-ide-server*"
+                 psc-ide-server-executable
+                 "-d" dir-name))
 
 (defun psc-ide-load-module-impl (module-name)
   "Load PureScript module and its dependencies."
   (unwrap-result (json-read-from-string
-                  (psc-ide-send (psc-ide-command-load [] (list module-name)))))
-  )
+                  (psc-ide-send (psc-ide-command-load [] (list module-name))))))
 
 (defun psc-ide-complete-impl (prefix)
   "Complete."
@@ -150,26 +144,22 @@
            (type (cdr (assoc 'type x)))
            (module (cdr (assoc 'module x))))
        (add-text-properties 0 1 (list :type type :module module) completion)
-       completion
-       ))
+       completion))
 
    (unwrap-result (json-read-from-string
-    (psc-ide-send (psc-ide-command-complete [] (matcher-flex prefix))))))
-)
+    (psc-ide-send (psc-ide-command-complete [] (matcher-flex prefix)))))))
 
 (defun psc-ide-show-type-impl (ident)
   "Show type."
   (let* ((resp (psc-ide-send (psc-ide-command-show-type [] ident)))
          (first-result (aref
-                       (unwrap-result (json-read-from-string
-                        resp) ) 0)))
+                        (unwrap-result (json-read-from-string
+                                        resp)) 0)))
 
-    (cdr (assoc 'type first-result)))
-)
+    (cdr (assoc 'type first-result))))
 
 (defun psc-ide-annotation (s)
-  (format " (%s)" (get-text-property 0 :module s))
-)
+  (format " (%s)" (get-text-property 0 :module s)))
 
 (defun psc-ide-suggest-project-dir ()
   (if (fboundp 'projectile-project-root)
@@ -183,8 +173,7 @@
     (post-command (and (eq major-mode 'purescript-mode)
                        (message
                         (get-text-property 0 :type
-                                           (nth company-selection company-candidates))))))
-)
+                                           (nth company-selection company-candidates)))))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
