@@ -7,7 +7,7 @@
 ;;            Christoph Hegemann
 ;; Homepage : https://github.com/epost/psc-ide-emacs
 ;; Version  : 0.1.0
-;; Package-Requires: ((dash "2.11.0") (company "0.8.7"))
+;; Package-Requires: ((dash "2.11.0") (company "0.8.7") (cl-lib "0.5"))
 ;; Keywords : languages
 
 ;;; Commentary:
@@ -22,6 +22,7 @@
 ;; Imports
 
 (require 'company)
+(require 'cl-lib)
 (require 'psc-ide-backported)
 (require 'psc-ide-protocol)
 
@@ -74,7 +75,7 @@
   "The psc-ide backend for 'company-mode'."
   (interactive (list 'interactive))
 
-  (case command
+  (cl-case command
     (interactive (company-begin-backend 'company-psc-ide-backend))
 
     (prefix (and (eq major-mode 'purescript-mode)
@@ -169,7 +170,7 @@
 (setq company-tooltip-align-annotations t)
 
 (defun company-psc-ide-frontend (command)
-  (case command
+  (cl-case command
     (post-command (and (eq major-mode 'purescript-mode)
                        (message
                         (get-text-property 0 :type
