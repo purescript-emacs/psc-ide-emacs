@@ -5,7 +5,7 @@
 ;; Protocol commands.
 
 ;; TODO localise
-(setq psc-ide-command-cwd (json-encode (list :command "cwd")))
+(defvar psc-ide-command-cwd (json-encode (list :command "cwd")))
 
 (defun psc-ide-command-load (modules deps)
   (json-encode
