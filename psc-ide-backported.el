@@ -20,7 +20,7 @@ May return a qualified name."
         (skip-chars-backward " \t"))
 
     (let ((case-fold-search nil))
-      (multiple-value-bind (start end)
+      (cl-multiple-value-bind (start end)
           (if (looking-at "\\s_")
               (list (progn (skip-syntax-backward "_") (point))
                     (progn (skip-syntax-forward "_") (point)))
