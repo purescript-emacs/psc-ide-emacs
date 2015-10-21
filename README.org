@@ -1,4 +1,6 @@
-#+title: psc-ide-emacs
+[[http://melpa.org/#/psc-ide][file:http://melpa.org/packages/psc-ide-badge.svg]]
+
+* psc-ide-emacs
 
 Very early stage Emacs integration for [[https://github.com/kRITZCREEK/psc-ide][kRITZCREEK/psc-ide]].
 
@@ -6,11 +8,19 @@ Very early stage Emacs integration for [[https://github.com/kRITZCREEK/psc-ide][
 
 * Installation
 
+The package is available on [[http://melpa.org/#/psc-ide][MELPA]]. Please read the MELPA's [[http://melpa.org/#/getting-started][Getting Started]] guide
+for more information. Once you have MELPA configured install psc-ide-emacs
+via =package.el=:
+
+#+BEGIN_SRC elisp
+M-x package-install RET psc-ide RET
+#+END_SRC
+
+* Configuration
+
 Add the following to your =~/.emacs=:
 
 #+BEGIN_SRC elisp
-;; specify the path to the plugin directory
-(add-to-list 'load-path "~/.emacs.d/lisp/psc-ide-emacs/")
 
 ;; specify path to the 'psc-ide' executable
 (customize-set-variable 'psc-ide-executable "/path/to/psc-ide")
