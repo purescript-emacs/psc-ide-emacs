@@ -106,9 +106,14 @@
   (psc-ide-complete-impl (psc-ide-ident-at-point)))
 
 (defun psc-ide-show-type ()
-  "Show type of the symbol under cursor"
+  "Show type of the symbol under cursor."
   (interactive)
-  (message (psc-ide-show-type-impl (psc-ide-ident-at-point))))
+  (let ((ident (psc-ide-ident-at-point)))
+    (-if-let (type-description (psc-ide-show-type-impl ident))
+        (message type-description)
+      (message (concat "Know nothing about type of `%s'. "
+                       "Have you loaded the corresponding module?")
+               ident))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -151,13 +156,13 @@
                                           [] (psc-ide-matcher-flex prefix)))))))
 
 (defun psc-ide-show-type-impl (ident)
-  "Show type."
+  "Returns a string that describes the type of IDENT.
+Returns NIL if the type of IDENT is not found."
   (let* ((resp (psc-ide-send (psc-ide-command-show-type [] ident)))
-         (first-result (aref
-                        (psc-ide-unwrap-result (json-read-from-string
-                                                resp)) 0)))
-
-    (cdr (assoc 'type first-result))))
+         (result (psc-ide-unwrap-result (json-read-from-string
+                                         resp))))
+    (when (not (zerop (length result)))
+      (cdr (assoc 'type (aref result 0))))))
 
 (defun psc-ide-annotation (s)
   (format " (%s)" (get-text-property 0 :module s)))
