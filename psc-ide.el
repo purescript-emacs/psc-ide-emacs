@@ -130,10 +130,9 @@
 
 (defun psc-ide-server-start-impl (dir-name)
   "Start psc-ide-server."
-  (start-process "*psc-ide-server*"
-                 "*psc-ide-server*"
-                 psc-ide-server-executable
-                 "-d" dir-name))
+  (apply #'start-process `("*psc-ide-server*" "*psc-ide-server*"
+                           ,@(split-string psc-ide-server-executable)
+                           "-d" ,dir-name)))
 
 (defun psc-ide-load-module-impl (module-name)
   "Load PureScript module and its dependencies."
