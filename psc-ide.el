@@ -7,7 +7,7 @@
 ;;            Christoph Hegemann
 ;; Homepage : https://github.com/epost/psc-ide-emacs
 ;; Version  : 0.1.0
-;; Package-Requires: ((dash "2.11.0") (company "0.8.7") (cl-lib "0.5"))
+;; Package-Requires: ((dash "2.11.0") (company "0.8.7") (cl-lib "0.5") (s "1.10.0"))
 ;; Keywords : languages
 
 ;;; Commentary:
@@ -23,6 +23,7 @@
 
 (require 'company)
 (require 'cl-lib)
+(require 's)
 (require 'psc-ide-backported)
 (require 'psc-ide-protocol)
 
@@ -66,10 +67,24 @@
   :group 'psc-ide
   :type  'string)
 
+(defconst psc-ide-import-regex
+  (rx (and line-start "import" (1+ space) (opt (and "qualified" (1+ space)))
+        (group (and (1+ (any word ".")))) 
+        (opt (1+ space) "as" (1+ space) (group (and (1+ word))))
+        (opt (1+ space) "(" (group (0+ not-newline)) ")"))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Interactive.
+
+(defun psc-ide-init ()
+  (interactive)
+
+  (set (make-local-variable 'psc-ide-import-list) nil)
+
+  (setq psc-ide-import-list
+        (psc-ide-parse-imports-in-buffer)))
+
 
 (defun company-psc-ide-backend (command &optional arg &rest ignored)
   "The psc-ide backend for 'company-mode'."
@@ -77,6 +92,8 @@
 
   (cl-case command
     (interactive (company-begin-backend 'company-psc-ide-backend))
+
+    (init (psc-ide-init))
 
     (prefix (and (eq major-mode 'purescript-mode)
                  (company-grab-symbol)
@@ -120,9 +137,50 @@
 ;;
 ;; Non-interactive.
 
+(defun psc-ide-parse-exposed (exposed)
+  (if exposed
+      (mapcar (lambda (item)
+                (s-trim item))
+              (s-split "," exposed))
+    nil))
+
+(defun psc-ide-get-import-from-match-data (&optional string)
+  (let* ((data (match-data))
+         (len (length data))
+         (idx 3)
+         result)
+    (push `(module . ,(match-string-no-properties 1 string)) result)
+    (push `(alias . ,(match-string-no-properties 2 string)) result)
+    (push `(exposing . ,(psc-ide-parse-exposed (match-string-no-properties 3 string))) result)
+    result))
+
+(defun psc-ide-parse-imports-in-buffer (&optional buffer)
+  "Parse the list of imports for the current elm BUFFER."
+  (let (matches)
+    (save-match-data
+      (save-excursion
+        (with-current-buffer (or buffer (current-buffer))
+          (save-restriction
+            (widen)
+            (goto-char 1)
+            (while (search-forward-regexp psc-ide-import-regex nil t 1)
+              (push (psc-ide-get-import-from-match-data) matches))))))
+    matches))
+
+;; TODO - figure out how to make this cross platform
+;; On windows, the shell quote characters are sent to the psc-ide stdin and the json is not valid
+(defconst debug-psc-ide-send-command f)
+
 (defun psc-ide-send (cmd)
   "Send a command to psc-ide."
-  (shell-command-to-string (concat "echo '" cmd "' | " psc-ide-executable)))
+  (let* ((cmd2 (format "echo %s | %s"
+                       cmd
+                       psc-ide-executable))
+         (resp (shell-command-to-string cmd2)))
+    (when debug-psc-ide-send-command
+        (message (format "Sent cmd: %s" cmd2 cmd))
+        (message (format "Got response: %s" resp)))
+    resp))
 
 (defun psc-ide-ask-project-dir ()
   "Ask psc-ide-server for the project dir."
