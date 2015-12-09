@@ -69,7 +69,7 @@
 
 (defconst psc-ide-import-regex
   (rx (and line-start "import" (1+ space) (opt (and "qualified" (1+ space)))
-        (group (and (1+ (any word ".")))) 
+        (group (and (1+ (any word "."))))
         (opt (1+ space) "as" (1+ space) (group (and (1+ word))))
         (opt (1+ space) "(" (group (0+ not-newline)) ")"))))
 
@@ -198,19 +198,30 @@
                           (psc-ide-send (psc-ide-command-load
                                          [] (list module-name))))))
 
+(defun psc-ide-get-completion-filter (prefix)
+  (let* ((components (s-split "."))
+         (search (last components))
+         (module (s-join "." (butlast components))))
+    (cons search module)))
+
 (defun psc-ide-complete-impl (prefix)
   "Complete."
-  (mapcar
-   (lambda (x)
-     (let ((completion (cdr (assoc 'identifier x)))
-           (type (cdr (assoc 'type x)))
-           (module (cdr (assoc 'module x))))
-       (add-text-properties 0 1 (list :type type :module module) completion)
-       completion))
+  (let* ((pprefix (psc-ide-get-completion-filter prefix))
+         (search (car pprefix))
+         (filters (cdr pprefix)))
 
-   (psc-ide-unwrap-result (json-read-from-string
-                           (psc-ide-send (psc-ide-command-complete
-                                          [] (psc-ide-matcher-flex prefix)))))))
+    (mapcar
+     (lambda (x)
+       (let ((completion (cdr (assoc 'identifier x)))
+             (type (cdr (assoc 'type x)))
+             (module (cdr (assoc 'module x))))
+         (add-text-properties 0 1 (list :type type :module module) completion)
+         completion))
+
+     (psc-ide-unwrap-result (json-read-from-string
+                             (psc-ide-send (psc-ide-command-complete
+                                            filters
+                                            (psc-ide-matcher-flex search))))))))
 
 (defun psc-ide-show-type-impl (ident)
   "Returns a string that describes the type of IDENT.
