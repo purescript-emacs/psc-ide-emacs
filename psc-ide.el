@@ -23,6 +23,7 @@
 
 (require 'company)
 (require 'cl-lib)
+(require 'dash)
 (require 's)
 (require 'psc-ide-backported)
 (require 'psc-ide-protocol)
@@ -80,10 +81,8 @@
 (defun psc-ide-init ()
   (interactive)
 
-  (set (make-local-variable 'psc-ide-import-list) nil)
-
-  (setq psc-ide-import-list
-        (psc-ide-parse-imports-in-buffer)))
+  (set (make-local-variable 'psc-ide-import-list)
+       (psc-ide-parse-imports-in-buffer)))
 
 
 (defun company-psc-ide-backend (command &optional arg &rest ignored)
@@ -138,13 +137,14 @@
 ;; Non-interactive.
 
 (defun psc-ide-parse-exposed (exposed)
+  "Parsed the EXPOSED names from a qualified import."
   (if exposed
       (mapcar (lambda (item)
                 (s-trim item))
               (s-split "," exposed))
     nil))
 
-(defun psc-ide-get-import-from-match-data (&optional string)
+(defun psc-ide-extract-import-from-match-data (&optional string)
   (let* ((data (match-data))
          (len (length data))
          (idx 3)
@@ -164,7 +164,7 @@
             (widen)
             (goto-char 1)
             (while (search-forward-regexp psc-ide-import-regex nil t 1)
-              (push (psc-ide-get-import-from-match-data) matches))))))
+              (push (psc-ide-extract-import-from-match-data) matches))))))
     matches))
 
 ;; TODO - figure out how to make this cross platform
@@ -198,10 +198,21 @@
                           (psc-ide-send (psc-ide-command-load
                                          [] (list module-name))))))
 
-(defun psc-ide-get-completion-filter (prefix)
-  (let* ((components (s-split "."))
-         (search (last components))
+(defun psc-ide-map-bare-imports (imports)
+  (-filter (lambda (import)
+             (and
+              (cdr (assoc 'alias import))
+              (car (assoc 'exposing import))))
+           imports))
+
+(defun psc-ide-get-completion-settings (prefix imports)
+  "Split the prefix into the alias and search term from PREFIX.
+Returns a cons cell with the search term minus any suffix and a list modules to search."
+  (let* ((components (s-split "\\." prefix))
+         (search (car (last components)))
          (module (s-join "." (butlast components))))
+    (if (not (equal "" module))
+        )
     (cons search module)))
 
 (defun psc-ide-complete-impl (prefix)
@@ -218,10 +229,11 @@
          (add-text-properties 0 1 (list :type type :module module) completion)
          completion))
 
-     (psc-ide-unwrap-result (json-read-from-string
-                             (psc-ide-send (psc-ide-command-complete
-                                            filters
-                                            (psc-ide-matcher-flex search))))))))
+     (psc-ide-unwrap-result
+      (json-read-from-string
+       (psc-ide-send (psc-ide-command-complete
+                      filters
+                      (psc-ide-matcher-flex search))))))))
 
 (defun psc-ide-show-type-impl (ident)
   "Returns a string that describes the type of IDENT.
