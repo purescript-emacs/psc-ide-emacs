@@ -81,7 +81,7 @@
 (defun psc-ide-init ()
   (interactive)
 
-  (set (make-local-variable 'psc-ide-import-list)
+  (set (make-local-variable 'psc-ide-buffer-import-list)
        (psc-ide-parse-imports-in-buffer)))
 
 
@@ -145,6 +145,10 @@
     nil))
 
 (defun psc-ide-extract-import-from-match-data (&optional string)
+
+  "Helper function for use when using the psc-ide-import-regex to match imports to extract
+the relevant info from the groups. STRING is for use when the search used was with `string-match'."
+
   (let* ((data (match-data))
          (len (length data))
          (idx 3)
@@ -155,7 +159,9 @@
     result))
 
 (defun psc-ide-parse-imports-in-buffer (&optional buffer)
+
   "Parse the list of imports for the current elm BUFFER."
+
   (let (matches)
     (save-match-data
       (save-excursion
@@ -169,7 +175,7 @@
 
 ;; TODO - figure out how to make this cross platform
 ;; On windows, the shell quote characters are sent to the psc-ide stdin and the json is not valid
-(defconst debug-psc-ide-send-command f)
+(defconst debug-psc-ide-send-command t)
 
 (defun psc-ide-send (cmd)
   "Send a command to psc-ide."
@@ -179,7 +185,8 @@
          (resp (shell-command-to-string cmd2)))
     (when debug-psc-ide-send-command
         (message (format "Sent cmd: %s" cmd2 cmd))
-        (message (format "Got response: %s" resp)))
+        ;;(message (format "Got response: %s" resp))
+        )
     resp))
 
 (defun psc-ide-ask-project-dir ()
@@ -198,32 +205,55 @@
                           (psc-ide-send (psc-ide-command-load
                                          [] (list module-name))))))
 
-(defun psc-ide-map-bare-imports (imports)
-  (-filter (lambda (import)
-             (and
-              (cdr (assoc 'alias import))
-              (car (assoc 'exposing import))))
-           imports))
+(defun psc-ide-filter-bare-imports (imports)
+  "Filter out all alias or explicit imports."
+  (->> imports
+       (-filter (lambda (import)
+                  (and
+                   (not (cdr (assoc 'alias import)))
+                   (not (cdr (assoc 'exposing import))))))
+       (-map (lambda (import)
+               (cdr (assoc 'module import))))))
+
+
+(defun psc-ide-filter-imports-by-alias (imports alias)
+  "Filters the imports by alias."
+  (let ((result (->> imports
+                     (-filter (lambda (import)
+                                (equal (cdr (assoc 'alias import)) alias)))
+                     (-map (lambda (import)
+                             (cdr (assoc 'module import)))))))
+    (if result
+        result
+      (list alias))))
+
 
 (defun psc-ide-get-completion-settings (prefix imports)
   "Split the prefix into the alias and search term from PREFIX.
-Returns a cons cell with the search term minus any suffix and a list modules to search."
+Returns a cons cell with the search term minus any suffix and a list of modules to search."
   (let* ((components (s-split "\\." prefix))
          (search (car (last components)))
-         (module (s-join "." (butlast components))))
-    (if (not (equal "" module))
-        )
-    (cons search module)))
+         (qualifier (s-join "." (butlast components))))
+    (if (equal "" qualifier)
+        (cons (cons search qualifier) (psc-ide-filter-bare-imports imports))
+      (cons (cons search qualifier) (psc-ide-filter-imports-by-alias imports qualifier)))))
+
+
+(defun psc-ide-make-module-filter (type modules)
+  (list :filter type
+        :params (list :modules modules)))
+
 
 (defun psc-ide-complete-impl (prefix)
   "Complete."
-  (let* ((pprefix (psc-ide-get-completion-filter prefix))
-         (search (car pprefix))
+  (let* ((pprefix (psc-ide-get-completion-settings prefix psc-ide-buffer-import-list))
+         (search (caar pprefix))
+         (qualifier (cdar pprefix))
          (filters (cdr pprefix)))
 
     (mapcar
      (lambda (x)
-       (let ((completion (cdr (assoc 'identifier x)))
+       (let ((completion (s-join "." (list qualifier (cdr (assoc 'identifier x)))))
              (type (cdr (assoc 'type x)))
              (module (cdr (assoc 'module x))))
          (add-text-properties 0 1 (list :type type :module module) completion)
@@ -232,7 +262,7 @@ Returns a cons cell with the search term minus any suffix and a list modules to 
      (psc-ide-unwrap-result
       (json-read-from-string
        (psc-ide-send (psc-ide-command-complete
-                      filters
+                      (vector (psc-ide-make-module-filter "modules" filters))
                       (psc-ide-matcher-flex search))))))))
 
 (defun psc-ide-show-type-impl (ident)

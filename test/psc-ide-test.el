@@ -13,8 +13,15 @@ import Halogen
 import Halogen.Util (appendToBody, onLoad)
 import 		qualified Halogen.HTML.Indexed 		as 	Hd
 import qualified Halogen.HTML.Properties.Indexed as P
+import Halogen.HTML.Events.Indexed as P
 
 ")
+
+(defun psc-ide-test-parse-example-imports ()
+  (with-temp-buffer
+    (insert psc-ide-test-example-imports)
+    (goto-char 0)
+    (psc-ide-parse-imports-in-buffer)))
 
 (ert-deftest psc-ide-show-type-impl-test ()
   (with-mock
@@ -75,7 +82,7 @@ import qualified Halogen.HTML.Properties.Indexed as P
    '("test1" "test2")))
 
 
-;; Prefix tets
+;; Prefix tests
 
 (ert-deftest test-prefix-non-qualified ()
   (with-temp-buffer
@@ -83,8 +90,28 @@ import qualified Halogen.HTML.Properties.Indexed as P
     (let ((symbol (psc-ide-ident-at-point)))
       (should (equal symbol "test")))))
 
-(ert-deftest text-prefix-qualified ()
+(ert-deftest test-prefix-qualified ()
   (with-temp-buffer
     (insert "test.a")
     (let ((symbol (psc-ide-ident-at-point)))
       (should (equal symbol "test.a")))))
+
+(ert-deftest test-filter-bare-imports ()
+  (let ((imports (psc-ide-test-parse-example-imports)))
+    (should (equal
+             (length (psc-ide-filter-bare-imports imports))
+             2))))
+
+(ert-deftest test-filter-imports-by-alias ()
+  (let ((imports (psc-ide-test-parse-example-imports)))
+    (should (equal
+             (length (psc-ide-filter-imports-by-alias imports "P"))
+             2))))
+
+(ert-deftest test-get-completion-settings ()
+  (let ((imports (psc-ide-test-parse-example-imports)))
+    (let* ((result (psc-ide-get-completion-settings "P.a"))
+           (search (car result))
+           (modules (cdr result)))
+      (should (equal "b" search))
+      (should (equal 2 (length modules))))))
