@@ -13,8 +13,15 @@ import Halogen
 import Halogen.Util (appendToBody, onLoad)
 import 		qualified Halogen.HTML.Indexed 		as 	Hd
 import qualified Halogen.HTML.Properties.Indexed as P
+import Halogen.HTML.Events.Indexed as P
 
 ")
+
+(defun psc-ide-test-parse-example-imports ()
+  (with-temp-buffer
+    (insert psc-ide-test-example-imports)
+    (goto-char 0)
+    (psc-ide-parse-imports-in-buffer)))
 
 (ert-deftest psc-ide-show-type-impl-test ()
   (with-mock
@@ -34,11 +41,11 @@ import qualified Halogen.HTML.Properties.Indexed as P
     (insert psc-ide-test-example-imports)
     (goto-char 0)
     (let ((matches (psc-ide-parse-imports-in-buffer)))
-      (should (= 8 (length matches))))))
+      (should (= 9 (length matches))))))
 
 (defun test-import (import name as exposing)
     (string-match psc-ide-import-regex import)
-    (let* ((import (psc-ide-get-import-from-match-data import)))
+    (let* ((import (psc-ide-extract-import-from-match-data import)))
       (should (equal (assoc 'module import) (cons 'module name)))
       (should (equal (assoc 'alias import) (cons 'alias as)))
       (should (equal (assoc 'exposing import) (cons 'exposing exposing)))))
@@ -75,16 +82,22 @@ import qualified Halogen.HTML.Properties.Indexed as P
    '("test1" "test2")))
 
 
-;; Prefix tets
+(ert-deftest test-filter-bare-imports ()
+  (let ((imports (psc-ide-test-parse-example-imports)))
+    (should (equal
+             (length (psc-ide-filter-bare-imports imports))
+             2))))
 
-(ert-deftest test-prefix-non-qualified ()
-  (with-temp-buffer
-    (insert "test")
-    (let ((symbol (psc-ide-ident-at-point)))
-      (should (equal symbol "test")))))
+(ert-deftest test-filter-imports-by-alias ()
+  (let ((imports (psc-ide-test-parse-example-imports)))
+    (should (equal
+             (length (psc-ide-filter-imports-by-alias imports "P"))
+             2))))
 
-(ert-deftest text-prefix-qualified ()
-  (with-temp-buffer
-    (insert "test.a")
-    (let ((symbol (psc-ide-ident-at-point)))
-      (should (equal symbol "test.a")))))
+(ert-deftest test-get-completion-settings ()
+  (let ((imports (psc-ide-test-parse-example-imports)))
+    (let* ((result (psc-ide-get-completion-settings "P.a" imports))
+           (search (car result))
+           (modules (cdr result)))
+      (should (equal '("a" . "P") search))
+      (should (equal 2 (length modules))))))
