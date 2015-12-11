@@ -173,20 +173,12 @@ the relevant info from the groups. STRING is for use when the search used was wi
               (push (psc-ide-extract-import-from-match-data) matches))))))
     matches))
 
-;; TODO - figure out how to make this cross platform
-;; On windows, the shell quote characters are sent to the psc-ide stdin and the json is not valid
-(defconst debug-psc-ide-send-command t)
-
 (defun psc-ide-send (cmd)
   "Send a command to psc-ide."
   (let* ((cmd2 (format "echo %s | %s"
-                       cmd
+                       (shell-quote-argument cmd)
                        psc-ide-executable))
          (resp (shell-command-to-string cmd2)))
-    (when debug-psc-ide-send-command
-        (message (format "Sent cmd: %s" cmd2 cmd))
-        ;;(message (format "Got response: %s" resp))
-        )
     resp))
 
 (defun psc-ide-ask-project-dir ()
@@ -235,7 +227,7 @@ Returns a cons cell with the search term minus any suffix and a list of modules 
   (let* ((components (s-split "\\." prefix))
          (search (car (last components)))
          (qualifier (s-join "." (butlast components))))
-    (if (string= "" qualifier)
+    (if (equal "" qualifier)
         (cons (cons search nil) (psc-ide-filter-bare-imports imports))
       (cons (cons search qualifier) (psc-ide-filter-imports-by-alias imports qualifier)))))
 
@@ -254,11 +246,13 @@ Returns a cons cell with the search term minus any suffix and a list of modules 
 
     (mapcar
      (lambda (x)
-       (let ((completion (s-join "." (list qualifier (cdr (assoc 'identifier x)))))
+       (let ((completion (cdr (assoc 'identifier x)))
              (type (cdr (assoc 'type x)))
              (module (cdr (assoc 'module x))))
          (add-text-properties 0 1 (list :type type :module module) completion)
-         completion))
+         (if qualifier
+             (s-join "." (list qualifier completion))
+           completion)))
 
      (psc-ide-unwrap-result
       (json-read-from-string
