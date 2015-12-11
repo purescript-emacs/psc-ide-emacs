@@ -220,7 +220,8 @@ the relevant info from the groups. STRING is for use when the search used was wi
   "Filters the imports by alias."
   (let ((result (->> imports
                      (-filter (lambda (import)
-                                (equal (cdr (assoc 'alias import)) alias)))
+                                (equal (cdr (assoc 'alias import))
+                                       alias)))
                      (-map (lambda (import)
                              (cdr (assoc 'module import)))))))
     (if result
@@ -234,8 +235,8 @@ Returns a cons cell with the search term minus any suffix and a list of modules 
   (let* ((components (s-split "\\." prefix))
          (search (car (last components)))
          (qualifier (s-join "." (butlast components))))
-    (if (equal "" qualifier)
-        (cons (cons search qualifier) (psc-ide-filter-bare-imports imports))
+    (if (string= "" qualifier)
+        (cons (cons search nil) (psc-ide-filter-bare-imports imports))
       (cons (cons search qualifier) (psc-ide-filter-imports-by-alias imports qualifier)))))
 
 

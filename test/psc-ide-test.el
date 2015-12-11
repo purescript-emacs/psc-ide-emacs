@@ -41,11 +41,11 @@ import Halogen.HTML.Events.Indexed as P
     (insert psc-ide-test-example-imports)
     (goto-char 0)
     (let ((matches (psc-ide-parse-imports-in-buffer)))
-      (should (= 8 (length matches))))))
+      (should (= 9 (length matches))))))
 
 (defun test-import (import name as exposing)
     (string-match psc-ide-import-regex import)
-    (let* ((import (psc-ide-get-import-from-match-data import)))
+    (let* ((import (psc-ide-extract-import-from-match-data import)))
       (should (equal (assoc 'module import) (cons 'module name)))
       (should (equal (assoc 'alias import) (cons 'alias as)))
       (should (equal (assoc 'exposing import) (cons 'exposing exposing)))))
@@ -82,20 +82,6 @@ import Halogen.HTML.Events.Indexed as P
    '("test1" "test2")))
 
 
-;; Prefix tests
-
-(ert-deftest test-prefix-non-qualified ()
-  (with-temp-buffer
-    (insert "test")
-    (let ((symbol (psc-ide-ident-at-point)))
-      (should (equal symbol "test")))))
-
-(ert-deftest test-prefix-qualified ()
-  (with-temp-buffer
-    (insert "test.a")
-    (let ((symbol (psc-ide-ident-at-point)))
-      (should (equal symbol "test.a")))))
-
 (ert-deftest test-filter-bare-imports ()
   (let ((imports (psc-ide-test-parse-example-imports)))
     (should (equal
@@ -110,8 +96,8 @@ import Halogen.HTML.Events.Indexed as P
 
 (ert-deftest test-get-completion-settings ()
   (let ((imports (psc-ide-test-parse-example-imports)))
-    (let* ((result (psc-ide-get-completion-settings "P.a"))
+    (let* ((result (psc-ide-get-completion-settings "P.a" imports))
            (search (car result))
            (modules (cdr result)))
-      (should (equal "b" search))
+      (should (equal '("a" . "P") search))
       (should (equal 2 (length modules))))))
