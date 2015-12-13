@@ -78,6 +78,8 @@
 ;;
 ;; Interactive.
 
+;;(add-hook 'after-save-hook #'psc-ide-init)
+
 (defun psc-ide-init ()
   (interactive)
 
@@ -94,10 +96,16 @@
 
     (init (psc-ide-init))
 
-    (prefix (and (eq major-mode 'purescript-mode)
-                 (company-grab-symbol)
-                 ;; (psc-ide-ident-at-point)
-                 ))
+    (prefix (when (and (eq major-mode 'purescript-mode)
+                       (not (company-in-string-or-comment)))
+              ;; (psc-ide-ident-at-point)
+              (let ((symbol (company-grab-symbol)))
+                (if symbol
+                    (if (psc-ide-qualified-p symbol)
+                        (progn
+                          (cons (car (last (s-split "\\." symbol))) t))
+                      symbol)
+                  'stop))))
 
     (candidates (psc-ide-complete-impl arg))
 
@@ -146,8 +154,9 @@
 
 (defun psc-ide-extract-import-from-match-data (&optional string)
 
-  "Helper function for use when using the psc-ide-import-regex to match imports to extract
-the relevant info from the groups. STRING is for use when the search used was with `string-match'."
+  "Helper function for use when using the `psc-ide-import-regex' to match
+imports to extract the relevant info from the groups.  STRING is for
+use when the search used was with `string-match'."
 
   (let* ((data (match-data))
          (len (length data))
@@ -160,7 +169,7 @@ the relevant info from the groups. STRING is for use when the search used was wi
 
 (defun psc-ide-parse-imports-in-buffer (&optional buffer)
 
-  "Parse the list of imports for the current elm BUFFER."
+  "Parse the list of imports for the current purescript BUFFER."
 
   (let (matches)
     (save-match-data
@@ -175,10 +184,11 @@ the relevant info from the groups. STRING is for use when the search used was wi
 
 (defun psc-ide-send (cmd)
   "Send a command to psc-ide."
-  (let* ((cmd2 (format "echo %s | %s"
-                       (shell-quote-argument cmd)
-                       psc-ide-executable))
-         (resp (shell-command-to-string cmd2)))
+  (let* ((shellcmd (format "echo %s | %s"
+                           (shell-quote-argument cmd)
+                           psc-ide-executable))
+         (resp (shell-command-to-string shellcmd)))
+    ;; (message "Cmd %s\nReceived %s" cmd resp)
     resp))
 
 (defun psc-ide-ask-project-dir ()
@@ -209,7 +219,8 @@ the relevant info from the groups. STRING is for use when the search used was wi
 
 
 (defun psc-ide-filter-imports-by-alias (imports alias)
-  "Filters the imports by alias."
+  "Filters the IMPORTS by ALIAS.  If nothing is found then just return ALIAS
+unchanged."
   (let ((result (->> imports
                      (-filter (lambda (import)
                                 (equal (cdr (assoc 'alias import))
@@ -220,10 +231,12 @@ the relevant info from the groups. STRING is for use when the search used was wi
         result
       (list alias))))
 
+(defun psc-ide-qualified-p (name)
+  (s-contains-p "." name))
 
 (defun psc-ide-get-completion-settings (prefix imports)
   "Split the prefix into the alias and search term from PREFIX.
-Returns a cons cell with the search term minus any suffix and a list of modules to search."
+Returns a cons cell with the search term and qualifier pair and a list of modules to search."
   (let* ((components (s-split "\\." prefix))
          (search (car (last components)))
          (qualifier (s-join "." (butlast components))))
@@ -239,26 +252,27 @@ Returns a cons cell with the search term minus any suffix and a list of modules 
 
 (defun psc-ide-complete-impl (prefix)
   "Complete."
-  (let* ((pprefix (psc-ide-get-completion-settings prefix psc-ide-buffer-import-list))
+  (let* ((pprefix (psc-ide-get-completion-settings (company-grab-symbol) psc-ide-buffer-import-list))
          (search (caar pprefix))
          (qualifier (cdar pprefix))
-         (filters (cdr pprefix)))
+         (filters (cdr pprefix))
+         (annotate (lambda (type module qualifier str)
+                     (add-text-properties 0 1 (list :type type :module module :qualifier qualifier) str)
+                     str)))
 
     (mapcar
      (lambda (x)
        (let ((completion (cdr (assoc 'identifier x)))
              (type (cdr (assoc 'type x)))
              (module (cdr (assoc 'module x))))
-         (add-text-properties 0 1 (list :type type :module module) completion)
-         (if qualifier
-             (s-join "." (list qualifier completion))
-           completion)))
+         (funcall annotate type module qualifier completion)))
 
      (psc-ide-unwrap-result
       (json-read-from-string
        (psc-ide-send (psc-ide-command-complete
                       (vector (psc-ide-make-module-filter "modules" filters))
-                      (psc-ide-matcher-flex search))))))))
+                      (when (and search (not (string= "" search)))
+                        (psc-ide-matcher-flex search)))))))))
 
 (defun psc-ide-show-type-impl (ident)
   "Returns a string that describes the type of IDENT.

@@ -24,9 +24,9 @@
 (defun psc-ide-command-complete (filters matcher)
   (json-encode
    (list :command "complete"
-         :params (list
-                  :filters filters
-                  :matcher matcher))))
+         :params (-filter #'identity
+                          `(,@(when filters (list :filters filters))
+                            ,@(when matcher (list :matcher matcher)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
