@@ -7,7 +7,7 @@
 ;;            Christoph Hegemann
 ;; Homepage : https://github.com/epost/psc-ide-emacs
 ;; Version  : 0.1.0
-;; Package-Requires: ((dash "2.11.0") (company "0.8.7") (cl-lib "0.5"))
+;; Package-Requires: ((dash "2.11.0") (company "0.8.7") (cl-lib "0.5") (s "1.10.0"))
 ;; Keywords : languages
 
 ;;; Commentary:
@@ -23,6 +23,8 @@
 
 (require 'company)
 (require 'cl-lib)
+(require 'dash)
+(require 's)
 (require 'psc-ide-backported)
 (require 'psc-ide-protocol)
 
@@ -66,10 +68,27 @@
   :group 'psc-ide
   :type  'string)
 
+(defconst psc-ide-import-regex
+  (rx (and line-start "import" (1+ space) (opt (and "qualified" (1+ space)))
+        (group (and (1+ (any word "."))))
+        (opt (1+ space) "as" (1+ space) (group (and (1+ word))))
+        (opt (1+ space) "(" (group (0+ not-newline)) ")"))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Interactive.
+
+(add-hook 'after-save-hook
+          (lambda ()
+            (set 'psc-ide-buffer-import-list
+                 (psc-ide-parse-imports-in-buffer))))
+
+(defun psc-ide-init ()
+  (interactive)
+
+  (set (make-local-variable 'psc-ide-buffer-import-list)
+       (psc-ide-parse-imports-in-buffer)))
+
 
 (defun company-psc-ide-backend (command &optional arg &rest ignored)
   "The psc-ide backend for 'company-mode'."
@@ -78,10 +97,18 @@
   (cl-case command
     (interactive (company-begin-backend 'company-psc-ide-backend))
 
-    (prefix (and (eq major-mode 'purescript-mode)
-                 (company-grab-symbol)
-                 ;; (psc-ide-ident-at-point)
-                 ))
+    (init (psc-ide-init))
+
+    (prefix (when (and (eq major-mode 'purescript-mode)
+                       (not (company-in-string-or-comment)))
+              ;; (psc-ide-ident-at-point)
+              (let ((symbol (company-grab-symbol)))
+                (if symbol
+                    (if (psc-ide-qualified-p symbol)
+                        (progn
+                          (cons (car (last (s-split "\\." symbol))) t))
+                      symbol)
+                  'stop))))
 
     (candidates (psc-ide-complete-impl arg))
 
@@ -120,9 +147,52 @@
 ;;
 ;; Non-interactive.
 
+(defun psc-ide-parse-exposed (exposed)
+  "Parsed the EXPOSED names from a qualified import."
+  (if exposed
+      (mapcar (lambda (item)
+                (s-trim item))
+              (s-split "," exposed))
+    nil))
+
+(defun psc-ide-extract-import-from-match-data (&optional string)
+
+  "Helper function for use when using the `psc-ide-import-regex' to match
+imports to extract the relevant info from the groups.  STRING is for
+use when the search used was with `string-match'."
+
+  (let* ((data (match-data))
+         (len (length data))
+         (idx 3)
+         result)
+    (push `(module . ,(match-string-no-properties 1 string)) result)
+    (push `(alias . ,(match-string-no-properties 2 string)) result)
+    (push `(exposing . ,(psc-ide-parse-exposed (match-string-no-properties 3 string))) result)
+    result))
+
+(defun psc-ide-parse-imports-in-buffer (&optional buffer)
+
+  "Parse the list of imports for the current purescript BUFFER."
+
+  (let (matches)
+    (save-match-data
+      (save-excursion
+        (with-current-buffer (or buffer (current-buffer))
+          (save-restriction
+            (widen)
+            (goto-char 1)
+            (while (search-forward-regexp psc-ide-import-regex nil t 1)
+              (push (psc-ide-extract-import-from-match-data) matches))))))
+    matches))
+
 (defun psc-ide-send (cmd)
   "Send a command to psc-ide."
-  (shell-command-to-string (concat "echo '" cmd "' | " psc-ide-executable)))
+  (let* ((shellcmd (format "echo '%s'| %s"
+                           cmd
+                           psc-ide-executable))
+         (resp (shell-command-to-string shellcmd)))
+    ;; (message "Cmd %s\nReceived %s" cmd resp)
+    resp))
 
 (defun psc-ide-ask-project-dir ()
   "Ask psc-ide-server for the project dir."
@@ -140,19 +210,98 @@
                           (psc-ide-send (psc-ide-command-load
                                          [] (list module-name))))))
 
+(defun psc-ide-filter-bare-imports (imports)
+  "Filter out all alias imports."
+  (->> imports
+       (-filter (lambda (import)
+                  (and
+                   ;;(not (cdr (assoc 'exposing import)))
+                   (not (cdr (assoc 'alias import))))))
+       (-map (lambda (import)
+               (cdr (assoc 'module import))))))
+
+
+(defun psc-ide-filter-imports-by-alias (imports alias)
+  "Filters the IMPORTS by ALIAS.  If nothing is found then just return ALIAS
+unchanged."
+  (let ((result (->> imports
+                     (-filter (lambda (import)
+                                (equal (cdr (assoc 'alias import))
+                                       alias)))
+                     (-map (lambda (import)
+                             (cdr (assoc 'module import)))))))
+    (if result
+        result
+      (list alias))))
+
+(defun psc-ide-find-import (imports name)
+  (-find (lambda (import)
+           (equal (assoc 'module import) name))
+         imports))
+
+(defun psc-ide-qualified-p (name)
+  (s-contains-p "." name))
+
+
+(defun psc-ide-get-completion-settings (prefix imports)
+  "Split the prefix into the qualifier and search term from PREFIX.
+Returns a cons cell with the search term and qualifier pair and a list of modules to search."
+  (let* ((components (s-split "\\." prefix))
+         (search (car (last components)))
+         (qualifier (s-join "." (butlast components))))
+    (if (equal "" qualifier)
+        (cons (cons search nil) (psc-ide-filter-bare-imports imports))
+      (cons (cons search qualifier) (psc-ide-filter-imports-by-alias imports qualifier)))))
+
+
+(defun psc-ide-make-module-filter (type modules)
+  (list :filter type
+        :params (list :modules modules)))
+
+(defun psc-ide-filter-results-p (imports search qualifier result)
+  (let ((completion (cdr (assoc 'identifier result)))
+        (type (cdr (assoc 'type result)))
+        (module (cdr (assoc 'module result))))
+    (if qualifier
+        t ;; return all results from qualified imports
+      (-find (lambda (import)
+               ;; return t for explicit imported names and open imports
+               (if (and
+                    (equal module (cdr (assoc 'module import)))
+                    (not (cdr (assoc 'alias import)))
+                    (or (not (cdr (assoc 'exposing import)))
+                        (-contains? (cdr (assoc 'exposing import)) completion)))
+                   t
+                 nil))
+             imports))))
+
 (defun psc-ide-complete-impl (prefix)
   "Complete."
-  (mapcar
-   (lambda (x)
-     (let ((completion (cdr (assoc 'identifier x)))
-           (type (cdr (assoc 'type x)))
-           (module (cdr (assoc 'module x))))
-       (add-text-properties 0 1 (list :type type :module module) completion)
-       completion))
+  (when psc-ide-buffer-import-list
+    (let* ((pprefix (psc-ide-get-completion-settings (company-grab-symbol) psc-ide-buffer-import-list))
+           (search (caar pprefix))
+           (qualifier (cdar pprefix))
+           (filters (cdr pprefix))
+           (annotate (lambda (type module qualifier str)
+                       (add-text-properties 0 1 (list :type type :module module :qualifier qualifier) str)
+                       str))
+           (result (psc-ide-unwrap-result
+                    (json-read-from-string
+                     (psc-ide-send (psc-ide-command-complete
+                                    (vector (psc-ide-make-module-filter "modules" filters))
+                                    (when (and search (not (string= "" search)))
+                                      (psc-ide-matcher-flex search))))))))
+      (->> result
+           (remove-if-not
+            (lambda (x)
+              (psc-ide-filter-results-p psc-ide-buffer-import-list search qualifier x)))
 
-   (psc-ide-unwrap-result (json-read-from-string
-                           (psc-ide-send (psc-ide-command-complete
-                                          [] (psc-ide-matcher-flex prefix)))))))
+           (mapcar
+            (lambda (x)
+              (let ((completion (cdr (assoc 'identifier x)))
+                    (type (cdr (assoc 'type x)))
+                    (module (cdr (assoc 'module x))))
+                (funcall annotate type module qualifier completion))))))))
 
 (defun psc-ide-show-type-impl (ident)
   "Returns a string that describes the type of IDENT.
