@@ -208,12 +208,12 @@ use when the search used was with `string-match'."
                                          [] (list module-name))))))
 
 (defun psc-ide-filter-bare-imports (imports)
-  "Filter out all alias or explicit imports."
+  "Filter out all alias imports."
   (->> imports
        (-filter (lambda (import)
                   (and
-                   (not (cdr (assoc 'alias import)))
-                   (not (cdr (assoc 'exposing import))))))
+                   ;;(not (cdr (assoc 'exposing import)))
+                   (not (cdr (assoc 'alias import))))))
        (-map (lambda (import)
                (cdr (assoc 'module import))))))
 
@@ -231,11 +231,17 @@ unchanged."
         result
       (list alias))))
 
+(defun psc-ide-find-import (imports name)
+  (-find (lambda (import)
+           (equal (assoc 'module import) name))
+         imports))
+
 (defun psc-ide-qualified-p (name)
   (s-contains-p "." name))
 
+
 (defun psc-ide-get-completion-settings (prefix imports)
-  "Split the prefix into the alias and search term from PREFIX.
+  "Split the prefix into the qualifier and search term from PREFIX.
 Returns a cons cell with the search term and qualifier pair and a list of modules to search."
   (let* ((components (s-split "\\." prefix))
          (search (car (last components)))
@@ -249,6 +255,20 @@ Returns a cons cell with the search term and qualifier pair and a list of module
   (list :filter type
         :params (list :modules modules)))
 
+(defun psc-ide-filter-results-p (imports search qualifier result)
+  (let ((completion (cdr (assoc 'identifier result)))
+        (type (cdr (assoc 'type result)))
+        (module (cdr (assoc 'module result))))
+    (if qualifier
+        t
+      (-find (lambda (import)
+               (if (and
+                    (eq module (assoc 'module import))
+                    (not (assoc 'qualifier import)))
+                   nil
+                 t))
+             imports)
+      )))
 
 (defun psc-ide-complete-impl (prefix)
   "Complete."
@@ -258,21 +278,24 @@ Returns a cons cell with the search term and qualifier pair and a list of module
          (filters (cdr pprefix))
          (annotate (lambda (type module qualifier str)
                      (add-text-properties 0 1 (list :type type :module module :qualifier qualifier) str)
-                     str)))
+                     str))
+         (result (psc-ide-unwrap-result
+                  (json-read-from-string
+                   (psc-ide-send (psc-ide-command-complete
+                                  (vector (psc-ide-make-module-filter "modules" filters))
+                                  (when (and search (not (string= "" search)))
+                                    (psc-ide-matcher-flex search))))))))
+    (->> result
+         (-filter
+          (lambda (x)
+            (psc-ide-filter-results-p psc-ide-buffer-import-list search qualifier x)))
 
-    (mapcar
-     (lambda (x)
-       (let ((completion (cdr (assoc 'identifier x)))
-             (type (cdr (assoc 'type x)))
-             (module (cdr (assoc 'module x))))
-         (funcall annotate type module qualifier completion)))
-
-     (psc-ide-unwrap-result
-      (json-read-from-string
-       (psc-ide-send (psc-ide-command-complete
-                      (vector (psc-ide-make-module-filter "modules" filters))
-                      (when (and search (not (string= "" search)))
-                        (psc-ide-matcher-flex search)))))))))
+         (mapcar
+          (lambda (x)
+            (let ((completion (cdr (assoc 'identifier x)))
+                  (type (cdr (assoc 'type x)))
+                  (module (cdr (assoc 'module x))))
+              (funcall annotate type module qualifier completion)))))))
 
 (defun psc-ide-show-type-impl (ident)
   "Returns a string that describes the type of IDENT.
