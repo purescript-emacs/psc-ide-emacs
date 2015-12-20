@@ -78,7 +78,10 @@
 ;;
 ;; Interactive.
 
-;;(add-hook 'after-save-hook #'psc-ide-init)
+(add-hook 'after-save-hook
+          (lambda ()
+            (set 'psc-ide-buffer-import-list
+                 (psc-ide-parse-imports-in-buffer))))
 
 (defun psc-ide-init ()
   (interactive)
@@ -274,30 +277,31 @@ Returns a cons cell with the search term and qualifier pair and a list of module
 
 (defun psc-ide-complete-impl (prefix)
   "Complete."
-  (let* ((pprefix (psc-ide-get-completion-settings (company-grab-symbol) psc-ide-buffer-import-list))
-         (search (caar pprefix))
-         (qualifier (cdar pprefix))
-         (filters (cdr pprefix))
-         (annotate (lambda (type module qualifier str)
-                     (add-text-properties 0 1 (list :type type :module module :qualifier qualifier) str)
-                     str))
-         (result (psc-ide-unwrap-result
-                  (json-read-from-string
-                   (psc-ide-send (psc-ide-command-complete
-                                  (vector (psc-ide-make-module-filter "modules" filters))
-                                  (when (and search (not (string= "" search)))
-                                    (psc-ide-matcher-flex search))))))))
-    (->> result
-         (remove-if-not
-          (lambda (x)
-            (psc-ide-filter-results-p psc-ide-buffer-import-list search qualifier x)))
+  (when psc-ide-buffer-import-list
+    (let* ((pprefix (psc-ide-get-completion-settings (company-grab-symbol) psc-ide-buffer-import-list))
+           (search (caar pprefix))
+           (qualifier (cdar pprefix))
+           (filters (cdr pprefix))
+           (annotate (lambda (type module qualifier str)
+                       (add-text-properties 0 1 (list :type type :module module :qualifier qualifier) str)
+                       str))
+           (result (psc-ide-unwrap-result
+                    (json-read-from-string
+                     (psc-ide-send (psc-ide-command-complete
+                                    (vector (psc-ide-make-module-filter "modules" filters))
+                                    (when (and search (not (string= "" search)))
+                                      (psc-ide-matcher-flex search))))))))
+      (->> result
+           (remove-if-not
+            (lambda (x)
+              (psc-ide-filter-results-p psc-ide-buffer-import-list search qualifier x)))
 
-         (mapcar
-          (lambda (x)
-            (let ((completion (cdr (assoc 'identifier x)))
-                  (type (cdr (assoc 'type x)))
-                  (module (cdr (assoc 'module x))))
-              (funcall annotate type module qualifier completion)))))))
+           (mapcar
+            (lambda (x)
+              (let ((completion (cdr (assoc 'identifier x)))
+                    (type (cdr (assoc 'type x)))
+                    (module (cdr (assoc 'module x))))
+                (funcall annotate type module qualifier completion))))))))
 
 (defun psc-ide-show-type-impl (ident)
   "Returns a string that describes the type of IDENT.
