@@ -184,8 +184,8 @@ use when the search used was with `string-match'."
 
 (defun psc-ide-send (cmd)
   "Send a command to psc-ide."
-  (let* ((shellcmd (format "echo %s | %s"
-                           (shell-quote-argument cmd)
+  (let* ((shellcmd (format "echo '%s'| %s"
+                           cmd
                            psc-ide-executable))
          (resp (shell-command-to-string shellcmd)))
     ;; (message "Cmd %s\nReceived %s" cmd resp)
@@ -260,15 +260,17 @@ Returns a cons cell with the search term and qualifier pair and a list of module
         (type (cdr (assoc 'type result)))
         (module (cdr (assoc 'module result))))
     (if qualifier
-        t
+        t ;; return all results from qualified imports
       (-find (lambda (import)
+               ;; return t for explicit imported names and open imports
                (if (and
-                    (eq module (assoc 'module import))
-                    (not (assoc 'qualifier import)))
-                   nil
-                 t))
-             imports)
-      )))
+                    (equal module (cdr (assoc 'module import)))
+                    (not (cdr (assoc 'alias import)))
+                    (or (not (cdr (assoc 'exposing import)))
+                        (-contains? (cdr (assoc 'exposing import)) completion)))
+                   t
+                 nil))
+             imports))))
 
 (defun psc-ide-complete-impl (prefix)
   "Complete."
@@ -286,7 +288,7 @@ Returns a cons cell with the search term and qualifier pair and a list of module
                                   (when (and search (not (string= "" search)))
                                     (psc-ide-matcher-flex search))))))))
     (->> result
-         (-filter
+         (remove-if-not
           (lambda (x)
             (psc-ide-filter-results-p psc-ide-buffer-import-list search qualifier x)))
 
