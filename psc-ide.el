@@ -243,15 +243,15 @@ unchanged."
   (s-contains-p "." name))
 
 
-(defun psc-ide-get-completion-settings (prefix imports)
+(defun psc-ide-get-ident-context (prefix imports)
   "Split the prefix into the qualifier and search term from PREFIX.
-Returns a cons cell with the search term and qualifier pair and a list of modules to search."
+Returns an plist with the search, qualifier, and relevant modules."
   (let* ((components (s-split "\\." prefix))
          (search (car (last components)))
          (qualifier (s-join "." (butlast components))))
     (if (equal "" qualifier)
-        (cons (cons search nil) (psc-ide-filter-bare-imports imports))
-      (cons (cons search qualifier) (psc-ide-filter-imports-by-alias imports qualifier)))))
+        (list 'search search 'qualifier nil 'modules (psc-ide-filter-bare-imports imports))
+      (list 'search search 'qualifier qualifier 'modules (psc-ide-filter-imports-by-alias imports qualifier)))))
 
 
 (defun psc-ide-make-module-filter (type modules)
@@ -278,12 +278,16 @@ Returns a cons cell with the search term and qualifier pair and a list of module
 (defun psc-ide-complete-impl (prefix)
   "Complete."
   (when psc-ide-buffer-import-list
-    (let* ((pprefix (psc-ide-get-completion-settings (company-grab-symbol) psc-ide-buffer-import-list))
-           (search (caar pprefix))
-           (qualifier (cdar pprefix))
-           (filters (cdr pprefix))
+    (let* ((pprefix (psc-ide-get-ident-context
+                     (company-grab-symbol)
+                     psc-ide-buffer-import-list))
+           (search (plist-get pprefix 'search))
+           (qualifier (plist-get pprefix 'qualifier))
+           (filters (plist-get pprefix 'modules))
            (annotate (lambda (type module qualifier str)
-                       (add-text-properties 0 1 (list :type type :module module :qualifier qualifier) str)
+                       (add-text-properties 0 1 (list :type type
+                                                      :module module
+                                                      :qualifier qualifier) str)
                        str))
            (result (psc-ide-unwrap-result
                     (json-read-from-string
@@ -306,7 +310,16 @@ Returns a cons cell with the search term and qualifier pair and a list of module
 (defun psc-ide-show-type-impl (ident)
   "Returns a string that describes the type of IDENT.
 Returns NIL if the type of IDENT is not found."
-  (let* ((resp (psc-ide-send (psc-ide-command-show-type [] ident)))
+
+  (let* ((pprefix (psc-ide-get-ident-context
+                   ident
+                   psc-ide-buffer-import-list))
+         (search (plist-get pprefix 'search))
+         (qualifier (plist-get pprefix 'qualifier))
+         (filters (plist-get pprefix 'modules))
+         (resp (psc-ide-send (psc-ide-command-show-type
+                              (vector (psc-ide-make-module-filter "modules" filters))
+                              search)))
          (result (psc-ide-unwrap-result (json-read-from-string
                                          resp))))
     (when (not (zerop (length result)))
