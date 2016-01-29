@@ -124,7 +124,7 @@
 
 (defun psc-ide-load-module (module-name)
   "Provide module to load"
-  (interactive (list (read-string "Module: " (car (split-string (buffer-name) "\\.")))) )
+  (interactive (list (read-string "Module: " (psc-ide-get-module-name))))
   (psc-ide-load-module-impl module-name))
 
 (defun psc-ide-complete ()
@@ -146,6 +146,15 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Non-interactive.
+
+(defun psc-ide-get-module-name ()
+  "Return the qualified name of the module in the current buffer."
+  (save-excursion
+   (save-restriction (widen)
+    (goto-char (point-min))
+    (unless (re-search-forward "module +\\([A-Z][A-Za-z0-9.]*\\)" nil t)
+      (error "Module declaration not found"))
+    (buffer-substring-no-properties (match-beginning 1) (match-end 1)))))
 
 (defun psc-ide-parse-exposed (exposed)
   "Parsed the EXPOSED names from a qualified import."
@@ -183,7 +192,7 @@ use when the search used was with `string-match'."
             (goto-char 1)
             (while (search-forward-regexp psc-ide-import-regex nil t 1)
               (push (psc-ide-extract-import-from-match-data) matches))))))
-    matches))
+    (push (psc-ide-get-module-name) matches)))
 
 (defun psc-ide-send (cmd)
   "Send a command to psc-ide."
