@@ -81,7 +81,8 @@
 (add-hook 'after-save-hook
           (lambda ()
             (set 'psc-ide-buffer-import-list
-                 (psc-ide-parse-imports-in-buffer))))
+                 (psc-ide-parse-imports-in-buffer)))
+          nil t)
 
 (defun psc-ide-init ()
   (interactive)
@@ -152,9 +153,8 @@
   (save-excursion
    (save-restriction (widen)
     (goto-char (point-min))
-    (unless (re-search-forward "module +\\([A-Z][A-Za-z0-9.]*\\)" nil t)
-      (error "Module declaration not found"))
-    (buffer-substring-no-properties (match-beginning 1) (match-end 1)))))
+    (when (re-search-forward "module +\\([A-Z][A-Za-z0-9.]*\\)" nil t)
+      (buffer-substring-no-properties (match-beginning 1) (match-end 1))))))
 
 (defun psc-ide-parse-exposed (exposed)
   "Parsed the EXPOSED names from a qualified import."
@@ -183,16 +183,19 @@ use when the search used was with `string-match'."
 
   "Parse the list of imports for the current purescript BUFFER."
 
-  (let (matches)
+  (let ((module-name (psc-ide-get-module-name))
+        (matches))
     (save-match-data
       (save-excursion
         (with-current-buffer (or buffer (current-buffer))
           (save-restriction
             (widen)
-            (goto-char 1)
+            (goto-char (point-min))
+            (when module-name
+              (push `((module . ,module-name)) matches))
             (while (search-forward-regexp psc-ide-import-regex nil t 1)
               (push (psc-ide-extract-import-from-match-data) matches))))))
-    (push (psc-ide-get-module-name) matches)))
+    matches))
 
 (defun psc-ide-send (cmd)
   "Send a command to psc-ide."
