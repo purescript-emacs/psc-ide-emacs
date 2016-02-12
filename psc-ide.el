@@ -1,10 +1,11 @@
-;;; psc-ide.el --- Minor mode for PureScript's psc-ide tool.
+;;; psc-ide.el --- Minor mode for PureScript's psc-ide tool. -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2015 The psc-ide-emacs authors
 
 ;; Author   : Erik Post <erik@shinsetsu.nl>
 ;;            Dmitry Bushenko <d.bushenko@gmail.com>
 ;;            Christoph Hegemann
+;;            Brian Sermons
 ;; Homepage : https://github.com/epost/psc-ide-emacs
 ;; Version  : 0.1.0
 ;; Package-Requires: ((dash "2.11.0") (company "0.8.7") (cl-lib "0.5") (s "1.10.0"))
@@ -121,7 +122,9 @@
                       symbol)
                   'stop))))
 
-    (candidates (psc-ide-complete-impl arg company--manual-action))
+    (candidates (cons :async
+                      (lambda (cb)
+                        (psc-ide-complete-impl arg cb company--manual-action))))
 
     (sorted t)
 
@@ -138,6 +141,7 @@
        (psc-ide-add-import-impl arg (vector
                                      (psc-ide-filter-modules
                                       (list (get-text-property 0 :module arg)))))))))
+
 
 (defun psc-ide-server-start (dir-name)
   "Start 'psc-ide-server'."
@@ -169,11 +173,7 @@
   "Show type of the symbol under cursor."
   (interactive)
   (let ((ident (psc-ide-ident-at-point)))
-    (-if-let (type-description (psc-ide-show-type-impl ident))
-        (message type-description)
-      (message (concat "Know nothing about type of `%s'. "
-                       "Have you loaded the corresponding module?")
-               ident))))
+    (psc-ide-show-type-impl ident)))
 
 (defun psc-ide-case-split (type)
   "Case Split on identifier under cursor."
@@ -273,9 +273,49 @@ use when the search used was with `string-match'."
     ;; (message "Cmd %s\nReceived %s" cmd resp)
     resp))
 
-(defun psc-ide-ask-project-dir ()
+(defun psc-ide-send-async (cmd callback &optional unwrap)
+  "Send a command to psc-ide."
+  (let (process)
+    (condition-case err
+        (let ((process-connection-type nil))
+          (setq process (start-process "psc-ide" nil psc-ide-executable))
+          (set-process-filter process #'psc-ide-receive-output)
+          (set-process-sentinel process #'psc-ide-handle-signal)
+          (set-process-query-on-exit-flag process nil)
+          (process-put process 'psc-ide-command cmd)
+          (process-put process 'psc-ide-callback callback)
+          (process-put process 'psc-ide-callback-unwrap unwrap)
+          (process-send-string process cmd)
+          (process-send-string process "\n")
+          (process-send-eof process)
+          process)
+      (error
+       (when process
+         (delete-process process))
+       (signal (car err) (cdr err))))))
+
+(defun psc-ide-receive-output (process output)
+  (push output (process-get process 'psc-ide-pending-output)))
+
+(defun psc-ide-get-output (process)
+  (with-demoted-errors "Error getting process output: %S"
+    (let ((pending-output (process-get process 'psc-ide-pending-output)))
+      (apply #'concat (nreverse pending-output)))))
+
+(defun psc-ide-handle-signal (process sig)
+  (when (eq (process-status process) 'exit)
+    (let ((output (psc-ide-get-output process))
+          (callback (process-get process 'psc-ide-callback))
+          (unwrap (process-get process 'psc-ide-callback-unwrap)))
+      (when callback
+        (if unwrap
+            (funcall callback (psc-ide-unwrap-result (json-read-from-string output)))
+          (funcall callback output))))))
+
+
+(defun psc-ide-ask-project-dir (cb)
   "Ask psc-ide-server for the project dir."
-  (psc-ide-send psc-ide-command-cwd))
+  (psc-ide-send-async psc-ide-command-cwd (lambda (result) (funcall cb result))))
 
 (defun psc-ide-server-start-impl (dir-name)
   "Start psc-ide-server."
@@ -285,9 +325,10 @@ use when the search used was with `string-match'."
 
 (defun psc-ide-load-module-impl (module-name)
   "Load PureScript module and its dependencies."
-  (psc-ide-unwrap-result (json-read-from-string
-                          (psc-ide-send (psc-ide-command-load
-                                         [] (list module-name))))))
+  (psc-ide-send-async (psc-ide-command-load
+                       [] (list module-name))
+                       nil
+                       t))
 
 (defun psc-ide-add-import-impl (identifier &optional filters)
   "Invoke the addImport command"
@@ -377,7 +418,7 @@ Returns an plist with the search, qualifier, and relevant modules."
                  nil))
              imports))))
 
-(defun psc-ide-complete-impl (prefix &optional nofilter)
+(defun psc-ide-complete-impl (prefix cb &optional nofilter)
   "Complete."
   (when psc-ide-buffer-import-list
     (let* ((pprefix (psc-ide-get-ident-context
@@ -392,24 +433,24 @@ Returns an plist with the search, qualifier, and relevant modules."
                                                       :qualifier qualifier) str)
                        str))
            (prefilter (psc-ide-filter-prefix prefix))
-           (filters (-non-nil (list (psc-ide-make-module-filter "modules" moduleFilters) prefilter)))
-           (result (psc-ide-unwrap-result
-                    (json-read-from-string
-                     (psc-ide-send (psc-ide-command-complete
-                                      (if nofilter
-                                          (vector prefilter) ;; (vconcat nil) = []
-                                        (vconcat filters))))))))
-      (->> result
-           (remove-if-not
-            (lambda (x)
-              (or nofilter (psc-ide-filter-results-p psc-ide-buffer-import-list search qualifier x))))
-
-           (mapcar
-            (lambda (x)
-              (let ((completion (cdr (assoc 'identifier x)))
-                    (type (cdr (assoc 'type x)))
-                    (module (cdr (assoc 'module x))))
-                (funcall annotate type module qualifier completion))))))))
+           (filters (-non-nil (list (psc-ide-make-module-filter "modules" moduleFilters) prefilter))))
+      (psc-ide-send-async
+       (psc-ide-command-complete
+        (if nofilter
+            (vector prefilter) ;; (vconcat nil) = []
+          (vconcat filters)))
+       (lambda (result)
+         (funcall cb (->> result
+                          (remove-if-not
+                           (lambda (x)
+                             (or nofilter (psc-ide-filter-results-p psc-ide-buffer-import-list search qualifier x))))
+                          (mapcar
+                           (lambda (x)
+                             (let ((completion (cdr (assoc 'identifier x)))
+                                   (type (cdr (assoc 'type x)))
+                                   (module (cdr (assoc 'module x))))
+                               (funcall annotate type module qualifier completion)))))))
+       t))))
 
 (defun psc-ide-show-type-impl (ident)
   "Returns a string that describes the type of IDENT.
@@ -420,14 +461,18 @@ Returns NIL if the type of IDENT is not found."
                    psc-ide-buffer-import-list))
          (search (plist-get pprefix 'search))
          (qualifier (plist-get pprefix 'qualifier))
-         (moduleFilters (plist-get pprefix 'modules))
-         (resp (psc-ide-send (psc-ide-command-show-type
-                              (vector (psc-ide-make-module-filter "modules" moduleFilters))
-                              search)))
-         (result (psc-ide-unwrap-result (json-read-from-string
-                                         resp))))
-    (when (not (zerop (length result)))
-      (cdr (assoc 'type (aref result 0))))))
+         (moduleFilters (plist-get pprefix 'modules)))
+    (psc-ide-send-async (psc-ide-command-show-type
+                         (vector (psc-ide-make-module-filter "modules" moduleFilters))
+                         search)
+                        (lambda (result)
+                          (when (not (zerop (length result)))
+                            (-if-let (type-description (cdr (assoc 'type (aref result 0))))
+                                (message type-description)
+                              (message (concat "Know nothing about type of `%s'. "
+                                               "Have you loaded the corresponding module?")
+                                       ident))))
+                        t)))
 
 (defun psc-ide-annotation (s)
   (format " (%s)" (get-text-property 0 :module s)))
