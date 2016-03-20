@@ -115,7 +115,8 @@
 
     (sorted t)
 
-    (annotation (psc-ide-annotation arg))))
+    (annotation (psc-ide-annotation arg))
+    (meta (get-text-property 0 :type arg))))
 
 (defun psc-ide-server-start (dir-name)
   "Start 'psc-ide-server'."
@@ -380,20 +381,11 @@ Returns NIL if the type of IDENT is not found."
 
 (setq company-tooltip-align-annotations t)
 
-(defun company-psc-ide-frontend (command)
-  (cl-case command
-    (post-command (and (eq major-mode 'purescript-mode)
-                       (message
-                        (get-text-property 0 :type
-                                           (nth company-selection company-candidates)))))))
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Utilities
 
 (add-to-list 'company-backends 'company-psc-ide-backend)
-(add-to-list 'company-frontends 'company-psc-ide-frontend)
 
 (provide 'psc-ide)
 
