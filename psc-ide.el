@@ -325,16 +325,19 @@ Returns an plist with the search, qualifier, and relevant modules."
                      psc-ide-buffer-import-list))
            (search (plist-get pprefix 'search))
            (qualifier (plist-get pprefix 'qualifier))
-           (filters (plist-get pprefix 'modules))
+           (moduleFilters (plist-get pprefix 'modules))
            (annotate (lambda (type module qualifier str)
                        (add-text-properties 0 1 (list :type type
                                                       :module module
                                                       :qualifier qualifier) str)
                        str))
+           (filters (-non-nil (list (psc-ide-make-module-filter "modules" moduleFilters)
+                                     (when (and prefix (not (string= "" prefix)))
+                                       (psc-ide-filter-prefix prefix)))))
            (result (psc-ide-unwrap-result
                     (json-read-from-string
                      (psc-ide-send (psc-ide-command-complete
-                                    (vector (psc-ide-make-module-filter "modules" filters))
+                                    (vconcat filters)
                                     (when (and search (not (string= "" search)))
                                       (psc-ide-matcher-flex search))))))))
       (->> result
@@ -358,9 +361,9 @@ Returns NIL if the type of IDENT is not found."
                    psc-ide-buffer-import-list))
          (search (plist-get pprefix 'search))
          (qualifier (plist-get pprefix 'qualifier))
-         (filters (plist-get pprefix 'modules))
+         (moduleFilters (plist-get pprefix 'modules))
          (resp (psc-ide-send (psc-ide-command-show-type
-                              (vector (psc-ide-make-module-filter "modules" filters))
+                              (vector (psc-ide-make-module-filter "modules" moduleFilters))
                               search)))
          (result (psc-ide-unwrap-result (json-read-from-string
                                          resp))))
