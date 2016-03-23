@@ -143,10 +143,40 @@
                        "Have you loaded the corresponding module?")
                ident))))
 
+(defun psc-ide-case-split (type)
+  "Case Split on identifier under cursor"
+  (interactive "sType: ")
+  (let ((new-lines (psc-ide-case-split-impl type)))
+    (beginning-of-line) (kill-line) ;; clears the current line
+    (insert (mapconcat 'identity new-lines "\n"))))
+
+(defun psc-ide-add-clause ()
+  "Add clause on identifier under cursor"
+  (interactive)
+  (let ((new-lines (psc-ide-add-clause-impl)))
+    (beginning-of-line) (kill-line) ;; clears the current line
+    (insert (mapconcat 'identity new-lines "\n"))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Non-interactive.
+
+(defun psc-ide-case-split-impl (type)
+  "Case Split on identifier under cursor"
+  (let ((reg (psc-ide-ident-pos-at-point)))
+    (psc-ide-unwrap-result (json-read-from-string
+                            (psc-ide-send (psc-ide-command-case-split
+                                           (substring (thing-at-point 'line t) 0 -1)
+                                           (save-excursion (goto-char (car reg)) (current-column))
+                                           (save-excursion (goto-char (cdr reg)) (current-column))
+                                           type))))))
+
+(defun psc-ide-add-clause-impl ()
+  "Add clause on identifier under cursor"
+  (let ((reg (psc-ide-ident-pos-at-point)))
+    (psc-ide-unwrap-result (json-read-from-string
+                            (psc-ide-send (psc-ide-command-add-clause
+                                           (substring (thing-at-point 'line t) 0 -1) nil))))))
 
 (defun psc-ide-get-module-name ()
   "Return the qualified name of the module in the current buffer."
