@@ -52,7 +52,7 @@
   :prefix "psc-ide-"
   :group 'psc-ide)
 
-(defcustom psc-ide-executable "psc-ide"
+(defcustom psc-ide-client-executable "psc-ide-client"
   "Path to the 'psc-ide' executable."
   :group 'psc-ide
   :type  'string)
@@ -232,7 +232,7 @@ use when the search used was with `string-match'."
   "Send a command to psc-ide."
   (let* ((shellcmd (format "echo '%s'| %s"
                            cmd
-                           psc-ide-executable))
+                           psc-ide-client-executable))
          (resp (shell-command-to-string shellcmd)))
     ;; (message "Cmd %s\nReceived %s" cmd resp)
     resp))
