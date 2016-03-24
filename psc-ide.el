@@ -38,9 +38,14 @@
   :lighter " psc-ide"
   :keymap (let ((map (make-sparse-keymap)))
             (define-key map (kbd "C-c C-s") 'psc-ide-server-start)
-            (define-key map (kbd "C-c C-l") 'psc-ide-load-module)
-            (define-key map (kbd "C-<SPC>") 'company-complete)
+            (define-key map (kbd "C-c C-q") 'psc-ide-server-quit)
+            (define-key map (kbd "C-c C-l") 'psc-ide-load-all)
+            (define-key map (kbd "C-c C-S-l") 'psc-ide-load-module)
+            (define-key map (kbd "C-c C-a") 'psc-ide-add-clause)
+            (define-key map (kbd "C-c C-c") 'psc-ide-case-split)
+            (define-key map (kbd "C-c C-i") 'psc-ide-add-import)
             (define-key map (kbd "C-c C-t") 'psc-ide-show-type)
+            (define-key map (kbd "C-<SPC>") 'company-complete)
             map))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -67,6 +72,11 @@
   :options '("flex" "prefix")
   :group 'psc-ide
   :type  'string)
+
+(defcustom psc-ide-add-import-on-completion "t"
+  "Whether to add imports on completion"
+  :group 'psc-ide
+  :type 'boolean)
 
 (defconst psc-ide-import-regex
   (rx (and line-start "import" (1+ space) (opt (and "qualified" (1+ space)))
@@ -111,12 +121,23 @@
                       symbol)
                   'stop))))
 
-    (candidates (psc-ide-complete-impl arg))
+    (candidates (psc-ide-complete-impl arg company--manual-action))
 
     (sorted t)
 
     (annotation (psc-ide-annotation arg))
-    (meta (get-text-property 0 :type arg))))
+
+    (meta (get-text-property 0 :type arg))
+
+    (post-completion
+     (unless (or
+              ;; Don't add an import when the option to do so is disabled
+              (not psc-ide-add-import-on-completion)
+              ;; or when a qualified identifier was completed
+              (get-text-property 0 :qualifier arg))
+       (psc-ide-add-import-impl arg (vector
+                                     (psc-ide-filter-modules
+                                      (list (get-text-property 0 :module arg)))))))))
 
 (defun psc-ide-server-start (dir-name)
   "Start 'psc-ide-server'."
@@ -124,10 +145,20 @@
                                           (psc-ide-suggest-project-dir))))
   (psc-ide-server-start-impl dir-name))
 
+(defun psc-ide-server-quit ()
+  "Quit 'psc-ide-server'."
+  (interactive)
+  (psc-ide-send psc-ide-command-quit))
+
 (defun psc-ide-load-module (module-name)
   "Provide module to load"
   (interactive (list (read-string "Module: " (psc-ide-get-module-name))))
   (psc-ide-load-module-impl module-name))
+
+(defun psc-ide-load-all ()
+  "Loads all the modules in the current project"
+  (interactive)
+  (psc-ide-send psc-ide-command-load-all))
 
 (defun psc-ide-complete ()
   "Complete prefix string using psc-ide."
@@ -145,18 +176,23 @@
                ident))))
 
 (defun psc-ide-case-split (type)
-  "Case Split on identifier under cursor"
+  "Case Split on identifier under cursor."
   (interactive "sType: ")
   (let ((new-lines (psc-ide-case-split-impl type)))
     (beginning-of-line) (kill-line) ;; clears the current line
     (insert (mapconcat 'identity new-lines "\n"))))
 
 (defun psc-ide-add-clause ()
-  "Add clause on identifier under cursor"
+  "Add clause on identifier under cursor."
   (interactive)
   (let ((new-lines (psc-ide-add-clause-impl)))
     (beginning-of-line) (kill-line) ;; clears the current line
     (insert (mapconcat 'identity new-lines "\n"))))
+
+(defun psc-ide-add-import ()
+  "Add an import for the symbol under the cursor."
+  (interactive)
+  (psc-ide-add-import-impl (psc-ide-ident-at-point)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -253,6 +289,29 @@ use when the search used was with `string-match'."
                           (psc-ide-send (psc-ide-command-load
                                          [] (list module-name))))))
 
+(defun psc-ide-add-import-impl (identifier &optional filters)
+  "Invoke the addImport command"
+  (let* ((tmp-file (make-temp-file "psc-ide-add-import"))
+         (filename (buffer-file-name (current-buffer)))
+         (result (progn
+                   (write-region (point-min) (point-max) tmp-file)
+                   (psc-ide-unwrap-result
+                    (json-read-from-string
+                     (psc-ide-send (psc-ide-command-add-import identifier filters tmp-file tmp-file)))))))
+    (if (not (stringp result))
+        (let ((selection
+               (completing-read "Which Module to import from: "
+                                (-map (lambda (x)
+                                        (cdr (assoc 'module x))) result))))
+          (psc-ide-add-import-impl identifier (vector (psc-ide-filter-modules (vector selection)))))
+      (progn (message (concat "Added import for " identifier))
+             (save-restriction
+               (widen)
+               ;; command successful, insert file with replacement to preserve
+               ;; markers.
+               (insert-file-contents tmp-file nil nil nil t))))
+    (delete-file tmp-file)))
+
 (defun psc-ide-filter-bare-imports (imports)
   "Filter out all alias imports."
   (->> imports
@@ -318,7 +377,7 @@ Returns an plist with the search, qualifier, and relevant modules."
                  nil))
              imports))))
 
-(defun psc-ide-complete-impl (prefix)
+(defun psc-ide-complete-impl (prefix &optional nofilter)
   "Complete."
   (when psc-ide-buffer-import-list
     (let* ((pprefix (psc-ide-get-ident-context
@@ -332,19 +391,18 @@ Returns an plist with the search, qualifier, and relevant modules."
                                                       :module module
                                                       :qualifier qualifier) str)
                        str))
-           (filters (-non-nil (list (psc-ide-make-module-filter "modules" moduleFilters)
-                                     (when (and prefix (not (string= "" prefix)))
-                                       (psc-ide-filter-prefix prefix)))))
+           (prefilter (psc-ide-filter-prefix prefix))
+           (filters (-non-nil (list (psc-ide-make-module-filter "modules" moduleFilters) prefilter)))
            (result (psc-ide-unwrap-result
                     (json-read-from-string
                      (psc-ide-send (psc-ide-command-complete
-                                    (vconcat filters)
-                                    (when (and search (not (string= "" search)))
-                                      (psc-ide-matcher-flex search))))))))
+                                      (if nofilter
+                                          (vector prefilter) ;; (vconcat nil) = []
+                                        (vconcat filters))))))))
       (->> result
            (remove-if-not
             (lambda (x)
-              (psc-ide-filter-results-p psc-ide-buffer-import-list search qualifier x)))
+              (or nofilter (psc-ide-filter-results-p psc-ide-buffer-import-list search qualifier x))))
 
            (mapcar
             (lambda (x)
