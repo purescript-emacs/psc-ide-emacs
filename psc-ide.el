@@ -53,7 +53,7 @@
   :prefix "psc-ide-"
   :group 'psc-ide)
 
-(defcustom psc-ide-executable "psc-ide"
+(defcustom psc-ide-client-executable "psc-ide-client"
   "Path to the 'psc-ide' executable."
   :group 'psc-ide
   :type  'string)
@@ -118,7 +118,8 @@
 
     (sorted t)
 
-    (annotation (psc-ide-annotation arg))))
+    (annotation (psc-ide-annotation arg))
+    (meta (get-text-property 0 :type arg))))
 
 
 (defun psc-ide-server-start (dir-name)
@@ -143,10 +144,40 @@
   (let ((ident (psc-ide-ident-at-point)))
     (psc-ide-show-type-impl ident)))
 
+(defun psc-ide-case-split (type)
+  "Case Split on identifier under cursor"
+  (interactive "sType: ")
+  (let ((new-lines (psc-ide-case-split-impl type)))
+    (beginning-of-line) (kill-line) ;; clears the current line
+    (insert (mapconcat 'identity new-lines "\n"))))
+
+(defun psc-ide-add-clause ()
+  "Add clause on identifier under cursor"
+  (interactive)
+  (let ((new-lines (psc-ide-add-clause-impl)))
+    (beginning-of-line) (kill-line) ;; clears the current line
+    (insert (mapconcat 'identity new-lines "\n"))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Non-interactive.
+
+(defun psc-ide-case-split-impl (type)
+  "Case Split on identifier under cursor"
+  (let ((reg (psc-ide-ident-pos-at-point)))
+    (psc-ide-unwrap-result (json-read-from-string
+                            (psc-ide-send (psc-ide-command-case-split
+                                           (substring (thing-at-point 'line t) 0 -1)
+                                           (save-excursion (goto-char (car reg)) (current-column))
+                                           (save-excursion (goto-char (cdr reg)) (current-column))
+                                           type))))))
+
+(defun psc-ide-add-clause-impl ()
+  "Add clause on identifier under cursor"
+  (let ((reg (psc-ide-ident-pos-at-point)))
+    (psc-ide-unwrap-result (json-read-from-string
+                            (psc-ide-send (psc-ide-command-add-clause
+                                           (substring (thing-at-point 'line t) 0 -1) nil))))))
 
 (defun psc-ide-get-module-name ()
   "Return the qualified name of the module in the current buffer."
@@ -201,7 +232,7 @@ use when the search used was with `string-match'."
   "Send a command to psc-ide."
   (let* ((shellcmd (format "echo '%s'| %s"
                            cmd
-                           psc-ide-executable))
+                           psc-ide-client-executable))
          (resp (shell-command-to-string shellcmd)))
     ;; (message "Cmd %s\nReceived %s" cmd resp)
     resp))
@@ -336,15 +367,18 @@ Returns an plist with the search, qualifier, and relevant modules."
                      psc-ide-buffer-import-list))
            (search (plist-get pprefix 'search))
            (qualifier (plist-get pprefix 'qualifier))
-           (filters (plist-get pprefix 'modules))
+           (moduleFilters (plist-get pprefix 'modules))
            (annotate (lambda (type module qualifier str)
                        (add-text-properties 0 1 (list :type type
                                                       :module module
                                                       :qualifier qualifier) str)
-                       str)))
+                       str))
+           (filters (-non-nil (list (psc-ide-make-module-filter "modules" moduleFilters)
+                                    (when (and prefix (not (string= "" prefix)))
+                                      (psc-ide-filter-prefix prefix))))))
       (psc-ide-send-async
        (psc-ide-command-complete
-        (vector (psc-ide-make-module-filter "modules" filters))
+        (vconcat filters)
         (when (and search (not (string= "" search)))
           (psc-ide-matcher-flex search)))
        (lambda (result)
@@ -369,9 +403,9 @@ Returns NIL if the type of IDENT is not found."
                    psc-ide-buffer-import-list))
          (search (plist-get pprefix 'search))
          (qualifier (plist-get pprefix 'qualifier))
-         (filters (plist-get pprefix 'modules)))
+         (moduleFilters (plist-get pprefix 'modules)))
     (psc-ide-send-async (psc-ide-command-show-type
-                         (vector (psc-ide-make-module-filter "modules" filters))
+                         (vector (psc-ide-make-module-filter "modules" moduleFilters))
                          search)
                         (lambda (result)
                           (when (not (zerop (length result)))
@@ -392,20 +426,11 @@ Returns NIL if the type of IDENT is not found."
 
 (setq company-tooltip-align-annotations t)
 
-(defun company-psc-ide-frontend (command)
-  (cl-case command
-    (post-command (and (eq major-mode 'purescript-mode)
-                       (message
-                        (get-text-property 0 :type
-                                           (nth company-selection company-candidates)))))))
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Utilities
 
 (add-to-list 'company-backends 'company-psc-ide-backend)
-(add-to-list 'company-frontends 'company-psc-ide-frontend)
 
 (provide 'psc-ide)
 

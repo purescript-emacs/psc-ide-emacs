@@ -21,12 +21,29 @@
                   :filters filters
                   :search search ))))
 
-(defun psc-ide-command-complete (filters matcher)
+(defun psc-ide-command-complete (filters &optional matcher)
   (json-encode
    (list :command "complete"
          :params (-filter #'identity
                           `(,@(when filters (list :filters filters))
                             ,@(when matcher (list :matcher matcher)))))))
+
+(defun psc-ide-command-case-split (line begin end type)
+  (json-encode
+   (list :command "caseSplit"
+         :params (list
+                  :line line
+                  :begin begin
+                  :end end
+                  :annotations json-false
+                  :type type ))))
+
+(defun psc-ide-command-add-clause (line annotations)
+  (json-encode
+   (list :command "addClause"
+         :params (list
+                  :line line
+                  :annotations (if annotations t json-false)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
