@@ -278,7 +278,7 @@ use when the search used was with `string-match'."
   (let (process)
     (condition-case err
         (let ((process-connection-type nil))
-          (setq process (start-process "psc-ide" nil psc-ide-executable))
+          (setq process (start-process "psc-ide" nil psc-ide-client-executable))
           (set-process-filter process #'psc-ide-receive-output)
           (set-process-sentinel process #'psc-ide-handle-signal)
           (set-process-query-on-exit-flag process nil)
