@@ -6,6 +6,8 @@
 
 ;; TODO localise
 (defvar psc-ide-command-cwd (json-encode (list :command "cwd")))
+(defvar psc-ide-command-quit (json-encode (list :command "quit")))
+(defvar psc-ide-command-load-all (json-encode (list :command "load")))
 
 (defun psc-ide-command-load (modules deps)
   (json-encode
@@ -21,13 +23,40 @@
                   :filters filters
                   :search search ))))
 
-(defun psc-ide-command-complete (filters matcher)
+(defun psc-ide-command-complete (filters &optional matcher)
   (json-encode
    (list :command "complete"
          :params (-filter #'identity
                           `(,@(when filters (list :filters filters))
                             ,@(when matcher (list :matcher matcher)))))))
 
+(defun psc-ide-command-case-split (line begin end type)
+  (json-encode
+   (list :command "caseSplit"
+         :params (list
+                  :line line
+                  :begin begin
+                  :end end
+                  :annotations json-false
+                  :type type ))))
+
+(defun psc-ide-command-add-clause (line annotations)
+  (json-encode
+   (list :command "addClause"
+         :params (list
+                  :line line
+                  :annotations (if annotations t json-false)))))
+
+(defun psc-ide-command-add-import (identifier &optional filters file outfile)
+  (json-encode
+   (list :command "import"
+         :params (list
+                  :file (or file (buffer-file-name))
+                  :outfile (or outfile (buffer-file-name))
+                  :filters filters
+                  :importCommand (list
+                                  :importCommand "addImport"
+                                  :identifier identifier)))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Protocol utilities.

@@ -2,51 +2,80 @@
 
 * psc-ide-emacs
 
-Very early stage Emacs integration for [[https://github.com/kRITZCREEK/psc-ide][kRITZCREEK/psc-ide]].
+  Emacs integration for [[https://github.com/purescript/purescript/tree/master/psc-ide-server][psc-ide]]
 
-[[./screenshot-1.png]]
+** Installation
 
-* Installation
+   The package is available on [[http://melpa.org/#/psc-ide][MELPA]]. Please read the MELPA's [[http://melpa.org/#/getting-started][Getting Started]] guide
+   for more information. Once you have MELPA configured install psc-ide-emacs
+   via =package.el=:
 
-The package is available on [[http://melpa.org/#/psc-ide][MELPA]]. Please read the MELPA's [[http://melpa.org/#/getting-started][Getting Started]] guide
-for more information. Once you have MELPA configured install psc-ide-emacs
-via =package.el=:
+   #+BEGIN_SRC elisp
+   M-x package-install RET psc-ide RET
+   #+END_SRC
 
-#+BEGIN_SRC elisp
-M-x package-install RET psc-ide RET
-#+END_SRC
+** Configuration
 
-* Configuration
+   Add the following to your =~/.emacs=:
+   
+   #+BEGIN_SRC elisp
 
-Add the following to your =~/.emacs=:
+   ;; specify path to the 'psc-ide' executable
+   (customize-set-variable 'psc-ide-executable "/path/to/psc-ide")
 
-#+BEGIN_SRC elisp
+   (require 'psc-ide)
 
-;; specify path to the 'psc-ide' executable
-(customize-set-variable 'psc-ide-executable "/path/to/psc-ide")
+   (add-hook 'purescript-mode-hook
+     (lambda ()
+       (psc-ide-mode)
+       (company-mode)))
+   #+END_SRC
 
-(require 'psc-ide)
+** Usage
 
-(add-hook 'purescript-mode-hook
-  (lambda ()
-    (psc-ide-mode)
-    (company-mode)))
-#+END_SRC
+*** Start the Server ~C-c C-s~
+*** Load all the modules ~C-c C-l~
+*** Get completions from the modules you imported while you type (through ~company-mode~)
+    [[http://i.imgur.com/8WnRh0s.gif]]
 
-* Usage
+*** Get completions from all modules in your project ~C-<SPC>~ (through ~company-mode~)
+    [[http://i.imgur.com/LR69MdN.gif]]
 
-- Optional: enable ~projectile-mode~ so ~psc-ide~ can find your PureScript project's root dir.
-- Do ~psc-ide-server-start~ (~C-c C-s~) and confirm the project dir.
-- Load the modules you want to use as completion sources (~C-c C-l~).
-- Visit a ~.purs~ buffer inside your PureScript project.
-- Put your cursor to the right of an identifier and press ~C-<SPC>~ to suggest completions.
-- Press ~C-c C-t~ to show the type of the identifier under the cursor.
+*** Show type for identifier under cursor ~C-c C-t~
+    [[http://i.imgur.com/A8cXe9t.gif]]
+    
+*** Add a clause for the function definition under cursor ~C-c C-a~
+    [[http://i.imgur.com/VNeC3z8.gif]]
 
-** Keybindings
+*** Case Split the given type under cursor ~C-c C-c~
+    [[http://i.imgur.com/hTnHxhK.gif]]
 
-| key       | function               |
-|-----------+------------------------|
-| ~C-c C-s~ | ~psc-ide-server-start~ |
-| ~C-c C-l~ | ~psc-ide-load-module~  |
-| ~C-<SPC>~ | ~company-complete~     |
-| ~C-c C-t~ | ~psc-ide-show-type~    |
+*** Add an import for the identifier under cursor ~C-c C-i~
+
+    If the import is ambiguous you will get a selection of modules, from which
+    you can choose the identifier you want.
+
+    [[http://i.imgur.com/VBXDvPg.gif]]
+
+*** Add an import on completion (turned on by default)
+    Can be turned of with:
+    #+BEGIN_SRC elisp
+    (customize-set-variable 'psc-ide-add-import-on-completion nil)
+    #+END_SRC
+    
+    [[http://i.imgur.com/r6rl2lT.gif]]
+    
+*** Keybindings
+    
+   | Key         | Function               |
+   |-------------+------------------------+
+   | ~C-c C-s~   | ~psc-ide-server-start~ |
+   | ~C-c C-q~   | ~psc-ide-server-quit~  |
+   | ~C-c C-l~   | ~psc-ide-load-all~     |
+   | ~C-c C-a~   | ~psc-ide-add-clause~   |
+   | ~C-c C-c~   | ~psc-ide-case-split~   |
+   | ~C-c C-i~   | ~psc-ide-add-import~   |
+   | ~C-c C-t~   | ~psc-ide-show-type~    |
+   | ~C-c C-S-l~ | ~psc-ide-load-module~  |
+   | ~C-<SPC>~   | ~company-complete~     |
+ 
