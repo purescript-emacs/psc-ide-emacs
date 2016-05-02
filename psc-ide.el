@@ -78,6 +78,11 @@
   :group 'psc-ide
   :type 'boolean)
 
+(defcustom psc-ide-rebuild-on-save "t"
+  "Whether to use the compilation window as a popup buffer to show errors"
+  :group 'psc-ide
+  :type 'boolean)
+
 (defconst psc-ide-import-regex
   (rx (and line-start "import" (1+ space) (opt (and "qualified" (1+ space)))
         (group (and (1+ (any word "."))))
@@ -93,6 +98,14 @@
             (set 'psc-ide-buffer-import-list
                  (psc-ide-parse-imports-in-buffer)))
           nil t)
+
+(defun psc-ide-rebuild-on-save-hook()
+  "Rebuilds the current module on safe"
+  (when (eq major-mode 'purescript-mode)
+    (psc-ide-rebuild)))
+
+(when psc-ide-rebuild-on-save
+  (add-hook 'after-save-hook 'psc-ide-rebuild-on-save-hook))
 
 (defun psc-ide-init ()
   (interactive)
@@ -197,8 +210,40 @@
 (defun psc-ide-rebuild ()
   "Rebuild the current module"
   (interactive)
-  (message (psc-ide-unwrap-result (json-read-from-string
-                                   (psc-ide-send (psc-ide-command-rebuild))))))
+  (let* ((res (json-read-from-string
+               (psc-ide-send (psc-ide-command-rebuild))))
+         (is-success (string= "success" (cdr (assoc 'resultType res))))
+         (result (cdr (assoc 'result res))))
+
+    (if (not is-success)
+        (let* ((first-error (aref result 0)))
+          (psc-ide-display-rebuild-error (psc-ide-pretty-json-error first-error))))
+    (if (<= (length result) 0)
+        (progn
+          (delete-windows-on (get-buffer-create "*psc-ide-rebuild*"))
+          (message "OK"))
+      (let* ((first-warning (aref result 0)))
+        (psc-ide-display-rebuild-error (psc-ide-pretty-json-error first-warning))))))
+
+(defun psc-ide-display-rebuild-error (err)
+  (with-current-buffer (get-buffer-create "*psc-ide-rebuild*")
+    (compilation-mode)
+    (read-only-mode -1)
+    (erase-buffer)
+    (insert err)
+    (read-only-mode 1))
+  (display-buffer "*psc-ide-rebuild*")
+  (set-window-point (get-buffer-window "*psc-ide-rebuild*") (point-min)))
+
+(defun psc-ide-pretty-json-error (first-error)
+  (let ((err-message (cdr (assoc 'message first-error)))
+        (err-filename (cdr (assoc 'filename first-error)))
+        (err-position (cdr (assoc 'position first-error))))
+    (if (not err-position)
+        err-message
+      (let ((err-column (cdr (assoc 'startColumn err-position)))
+            (err-line (cdr (assoc 'startLine err-position))))
+        (concat err-filename ":" (number-to-string err-line) ":" (number-to-string err-column) ":" "\n" err-message)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
