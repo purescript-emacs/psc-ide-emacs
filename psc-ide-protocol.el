@@ -57,6 +57,13 @@
                   :importCommand (list
                                   :importCommand "addImport"
                                   :identifier identifier)))))
+
+(defun psc-ide-command-rebuild (&optional filepath outpath)
+  (json-encode
+   (list :command "rebuild"
+         :params (list
+                  :file (or filepath (buffer-file-name (current-buffer)))
+                  :outpath outpath))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Protocol utilities.

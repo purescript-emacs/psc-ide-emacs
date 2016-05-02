@@ -194,6 +194,12 @@
   (interactive)
   (psc-ide-add-import-impl (psc-ide-ident-at-point)))
 
+(defun psc-ide-rebuild ()
+  "Rebuild the current module"
+  (interactive)
+  (message (psc-ide-unwrap-result (json-read-from-string
+                                   (psc-ide-send (psc-ide-command-rebuild))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Non-interactive.
