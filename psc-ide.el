@@ -450,7 +450,8 @@ Returns an plist with the search, qualifier, and relevant modules."
                      (psc-ide-send (psc-ide-command-complete
                                       (if nofilter
                                           (vector prefilter) ;; (vconcat nil) = []
-                                        (vconcat filters))))))))
+                                        (vconcat filters))
+                                      nil (psc-ide-get-module-name)))))))
       (->> result
            (remove-if-not
             (lambda (x)
