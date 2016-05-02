@@ -78,8 +78,9 @@
   :group 'psc-ide
   :type 'boolean)
 
-(defcustom psc-ide-rebuild-on-save "t"
-  "Whether to use the compilation window as a popup buffer to show errors"
+(defcustom psc-ide-rebuild-on-save nil
+  "Whether to rebuild files on save and display errors/warnings
+in a buffer"
   :group 'psc-ide
   :type 'boolean)
 
