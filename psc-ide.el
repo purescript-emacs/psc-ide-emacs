@@ -45,7 +45,7 @@
             (define-key map (kbd "C-c C-c") 'psc-ide-case-split)
             (define-key map (kbd "C-c C-i") 'psc-ide-add-import)
             (define-key map (kbd "C-c C-t") 'psc-ide-show-type)
-            (define-key map (kbd "C-<SPC>") 'company-complete)
+            (define-key map (kbd "C-c C-b") 'psc-ide-rebuild)
             map))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
