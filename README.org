@@ -44,7 +44,7 @@
 *** Show type for identifier under cursor ~C-c C-t~
     [[http://i.imgur.com/A8cXe9t.gif]]
     
-*** Add a clause for the function definition under cursor ~C-c C-t~
+*** Add a clause for the function definition under cursor ~C-c C-a~
     [[http://i.imgur.com/VNeC3z8.gif]]
 
 *** Case Split the given type under cursor ~C-c C-c~

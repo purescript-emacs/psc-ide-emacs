@@ -59,7 +59,7 @@
   :group 'psc-ide)
 
 (defcustom psc-ide-client-executable "psc-ide-client"
-  "Path to the 'psc-ide' executable."
+  "Path to the 'psc-ide-client' executable."
   :group 'psc-ide
   :type  'string)
 
@@ -152,7 +152,7 @@
 (defun psc-ide-server-quit ()
   "Quit 'psc-ide-server'."
   (interactive)
-  (psc-ide-send psc-ide-command-quit))
+  (psc-ide-send-async psc-ide-command-quit nil))
 
 (defun psc-ide-load-module (module-name)
   "Provide module to load"
@@ -162,7 +162,7 @@
 (defun psc-ide-load-all ()
   "Loads all the modules in the current project"
   (interactive)
-  (psc-ide-send psc-ide-command-load-all))
+  (psc-ide-send-async psc-ide-command-load-all nil))
 
 (defun psc-ide-complete ()
   "Complete prefix string using psc-ide."
@@ -178,16 +178,19 @@
 (defun psc-ide-case-split (type)
   "Case Split on identifier under cursor."
   (interactive "sType: ")
-  (let ((new-lines (psc-ide-case-split-impl type)))
-    (beginning-of-line) (kill-line) ;; clears the current line
-    (insert (mapconcat 'identity new-lines "\n"))))
+  (psc-ide-case-split-impl
+   type
+   (lambda (new-lines)
+     (beginning-of-line) (kill-line) ;; clears the current line
+     (insert (mapconcat 'identity new-lines "\n")))))
 
 (defun psc-ide-add-clause ()
   "Add clause on identifier under cursor."
   (interactive)
-  (let ((new-lines (psc-ide-add-clause-impl)))
-    (beginning-of-line) (kill-line) ;; clears the current line
-    (insert (mapconcat 'identity new-lines "\n"))))
+  (psc-ide-add-clause-impl
+   (lambda (new-lines)
+     (beginning-of-line) (kill-line) ;; clears the current line
+     (insert (mapconcat 'identity new-lines "\n")))))
 
 (defun psc-ide-add-import ()
   "Add an import for the symbol under the cursor."
@@ -198,22 +201,26 @@
 ;;
 ;; Non-interactive.
 
-(defun psc-ide-case-split-impl (type)
-  "Case Split on identifier under cursor"
+(defun psc-ide-case-split-impl (type callback)
+  "Case Split on TYPE and send results to CALLBACK."
   (let ((reg (psc-ide-ident-pos-at-point)))
-    (psc-ide-unwrap-result (json-read-from-string
-                            (psc-ide-send (psc-ide-command-case-split
-                                           (substring (thing-at-point 'line t) 0 -1)
-                                           (save-excursion (goto-char (car reg)) (current-column))
-                                           (save-excursion (goto-char (cdr reg)) (current-column))
-                                           type))))))
+    (psc-ide-send-async
+     (psc-ide-command-case-split
+      (substring (thing-at-point 'line t) 0 -1)
+      (save-excursion (goto-char (car reg)) (current-column))
+      (save-excursion (goto-char (cdr reg)) (current-column))
+      type)
+     callback
+     t)))
 
-(defun psc-ide-add-clause-impl ()
-  "Add clause on identifier under cursor"
+(defun psc-ide-add-clause-impl (callback)
+  "Add clause on identifier under cursor and send results to CALLBACK."
   (let ((reg (psc-ide-ident-pos-at-point)))
-    (psc-ide-unwrap-result (json-read-from-string
-                            (psc-ide-send (psc-ide-command-add-clause
-                                           (substring (thing-at-point 'line t) 0 -1) nil))))))
+    (psc-ide-send-async
+     (psc-ide-command-add-clause
+      (substring (thing-at-point 'line t) 0 -1) nil)
+     callback
+     t)))
 
 (defun psc-ide-get-module-name ()
   "Return the qualified name of the module in the current buffer."
@@ -274,7 +281,8 @@ use when the search used was with `string-match'."
     resp))
 
 (defun psc-ide-send-async (cmd callback &optional unwrap)
-  "Send a command to psc-ide."
+  "Send a CMD to psc-ide, returning the results to CALLBACK.
+If UNWRAP is non-nil, then decode json and unwrap the result before sending it to CALLBACK."
   (let (process)
     (condition-case err
         (let ((process-connection-type nil))
@@ -333,25 +341,25 @@ use when the search used was with `string-match'."
 (defun psc-ide-add-import-impl (identifier &optional filters)
   "Invoke the addImport command"
   (let* ((tmp-file (make-temp-file "psc-ide-add-import"))
-         (filename (buffer-file-name (current-buffer)))
-         (result (progn
-                   (write-region (point-min) (point-max) tmp-file)
-                   (psc-ide-unwrap-result
-                    (json-read-from-string
-                     (psc-ide-send (psc-ide-command-add-import identifier filters tmp-file tmp-file)))))))
-    (if (not (stringp result))
-        (let ((selection
-               (completing-read "Which Module to import from: "
-                                (-map (lambda (x)
-                                        (cdr (assoc 'module x))) result))))
-          (psc-ide-add-import-impl identifier (vector (psc-ide-filter-modules (vector selection)))))
-      (progn (message (concat "Added import for " identifier))
-             (save-restriction
-               (widen)
-               ;; command successful, insert file with replacement to preserve
-               ;; markers.
-               (insert-file-contents tmp-file nil nil nil t))))
-    (delete-file tmp-file)))
+         (filename (buffer-file-name (current-buffer))))
+    (write-region (point-min) (point-max) tmp-file)
+    (psc-ide-send-async
+     (psc-ide-command-add-import identifier filters tmp-file tmp-file)
+     (lambda (result)
+       (if (not (stringp result))
+           (let ((selection
+                  (completing-read "Which Module to import from: "
+                                   (-map (lambda (x)
+                                           (cdr (assoc 'module x))) result))))
+             (psc-ide-add-import-impl identifier (vector (psc-ide-filter-modules (vector selection)))))
+         (progn (message (concat "Added import for " identifier))
+                (save-restriction
+                  (widen)
+                  ;; command successful, insert file with replacement to preserve
+                  ;; markers.
+                  (insert-file-contents tmp-file nil nil nil t))))
+       (delete-file tmp-file))
+     t)))
 
 (defun psc-ide-filter-bare-imports (imports)
   "Filter out all alias imports."
@@ -451,6 +459,7 @@ Returns an plist with the search, qualifier, and relevant modules."
                                    (module (cdr (assoc 'module x))))
                                (funcall annotate type module qualifier completion)))))))
        t))))
+
 
 (defun psc-ide-show-type-impl (ident)
   "Returns a string that describes the type of IDENT.
