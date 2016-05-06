@@ -17,7 +17,7 @@
 ** Configuration
 
    Add the following to your =~/.emacs=:
-   
+
    #+BEGIN_SRC elisp
 
    ;; specify path to the 'psc-ide' executable
@@ -38,12 +38,17 @@
 *** Get completions from the modules you imported while you type (through ~company-mode~)
     [[http://i.imgur.com/8WnRh0s.gif]]
 
-*** Get completions from all modules in your project ~C-<SPC>~ (through ~company-mode~)
+*** Get completions from all modules in your project with ~company-complete~
+    This was bound to ~C-SPC~ in earlier versions but was too intrusive for
+    usual emacs users so you'll have to bind it to a key of choice.
+
+    eg. ~(global-set-key (kbd "C-SPC") 'company-complete)~
+
     [[http://i.imgur.com/LR69MdN.gif]]
 
 *** Show type for identifier under cursor ~C-c C-t~
     [[http://i.imgur.com/A8cXe9t.gif]]
-    
+
 *** Add a clause for the function definition under cursor ~C-c C-t~
     [[http://i.imgur.com/VNeC3z8.gif]]
 
@@ -62,13 +67,19 @@
     #+BEGIN_SRC elisp
     (customize-set-variable 'psc-ide-add-import-on-completion nil)
     #+END_SRC
-    
+
     [[http://i.imgur.com/r6rl2lT.gif]]
-    
+
+*** Rebuild the current module and get quick error reporting ~C-c C-b~
+    If you set ~(custom-set-variables 'psc-ide-rebuild-on-save t)~ psc-ide will
+    try to rebuild your module on every save.
+
+    [[http://i.imgur.com/c0L6C4B.gif]]
+
 *** Keybindings
-    
+
    | Key         | Function               |
-   |-------------+------------------------+
+   |-------------+------------------------|
    | ~C-c C-s~   | ~psc-ide-server-start~ |
    | ~C-c C-q~   | ~psc-ide-server-quit~  |
    | ~C-c C-l~   | ~psc-ide-load-all~     |
@@ -76,6 +87,5 @@
    | ~C-c C-c~   | ~psc-ide-case-split~   |
    | ~C-c C-i~   | ~psc-ide-add-import~   |
    | ~C-c C-t~   | ~psc-ide-show-type~    |
+   | ~C-c C-b~   | ~psc-ide-rebuild~      |
    | ~C-c C-S-l~ | ~psc-ide-load-module~  |
-   | ~C-<SPC>~   | ~company-complete~     |
- 

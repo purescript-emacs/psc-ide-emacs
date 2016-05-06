@@ -23,12 +23,13 @@
                   :filters filters
                   :search search ))))
 
-(defun psc-ide-command-complete (filters &optional matcher)
+(defun psc-ide-command-complete (filters &optional matcher module)
   (json-encode
    (list :command "complete"
          :params (-filter #'identity
                           `(,@(when filters (list :filters filters))
-                            ,@(when matcher (list :matcher matcher)))))))
+                            ,@(when matcher (list :matcher matcher))
+                            ,@(when module (list :currentModule module)))))))
 
 (defun psc-ide-command-case-split (line begin end type)
   (json-encode
@@ -57,6 +58,14 @@
                   :importCommand (list
                                   :importCommand "addImport"
                                   :identifier identifier)))))
+
+(defun psc-ide-command-rebuild (&optional filepath outpath)
+  (json-encode
+   (list :command "rebuild"
+         :params (list
+                  :file (or filepath (buffer-file-name (current-buffer)))
+                  :cacheSuccess t
+                  :outpath outpath))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Protocol utilities.
