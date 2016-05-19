@@ -21,8 +21,6 @@
    #+BEGIN_SRC elisp
 
    ;; specify path to the 'psc-ide' executable
-   (customize-set-variable 'psc-ide-executable "/path/to/psc-ide")
-
    (require 'psc-ide)
 
    (add-hook 'purescript-mode-hook
