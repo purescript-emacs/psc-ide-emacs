@@ -321,28 +321,31 @@ use when the search used was with `string-match'."
     matches))
 
 (defun psc-ide-send (cmd callback)
-  (let ((proc (make-network-process
-               :name "psc-ide-server"
-               :family 'ipv4
-               :host "localhost"
-               :service 4242
-               :filter (-partial 'wrap-psc-ide-callback callback))))
-    (process-send-string proc (s-prepend cmd "\n"))))
+  (condition-case err
+      (let ((proc (make-network-process
+                   :name "psc-ide-server"
+                   :family 'ipv4
+                   :host "localhost"
+                   :service 4242
+                   :filter (-partial 'wrap-psc-ide-callback callback))))
+        (process-send-string proc (s-prepend cmd "\n")))
+    ;; Catch all the errors that happen when trying to connect
+    (error
+     (error
+      (s-join " "
+              '("It seems like the server is not running. You can"
+                "start it using psc-ide-server-start."))))))
 
 (defun wrap-psc-ide-callback (callback proc output)
   "Wraps a function that expects a parsed psc-ide response"
-  (let ((parsed (condition-case err
-                    (json-read-from-string output)
-                  (json-readtable-error
-                   (error
-                    (s-join " "
-                            '("It seems like the server is not running. You can"
-                              "start it using psc-ide-server-start.")))))))
+  (let ((parsed (json-read-from-string output)))
     (funcall callback parsed)))
 
 (defun psc-ide-ask-project-dir ()
   "Ask psc-ide-server for the project dir."
-  (psc-ide-send psc-ide-command-cwd))
+  (interactive)
+  (psc-ide-send psc-ide-command-cwd
+                (-compose 'message 'psc-ide-unwrap-result)))
 
 (defun psc-ide-server-start-impl (dir-name)
   "Start psc-ide-server."
