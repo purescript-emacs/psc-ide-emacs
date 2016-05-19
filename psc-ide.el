@@ -67,6 +67,16 @@
   :group 'psc-ide
   :type  'string)
 
+(defcustom psc-ide-port 4242
+  "The port that psc-ide-server and the client use."
+  :group 'psc-ide
+  :type  'integer)
+
+(defcustom psc-ide-debug nil
+  "Whether psc-ide-server should be started with the debug flag"
+  :group 'psc-ide
+  :type  'boolean)
+
 (defcustom psc-ide-completion-matcher "flex"
   "The method used for completions."
   :options '("flex" "prefix")
