@@ -1,4 +1,4 @@
-;;; psc-ide.el --- Minor mode for PureScript's psc-ide tool.
+;;; psc-ide.el --- Minor mode for PureScript's psc-ide tool. -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2015 The psc-ide-emacs authors
 
@@ -24,6 +24,7 @@
 (require 'company)
 (require 'cl-lib)
 (require 'dash)
+(require 'dash-functional)
 (require 's)
 (require 'psc-ide-backported)
 (require 'psc-ide-protocol)
@@ -145,7 +146,8 @@ in a buffer"
                       symbol)
                   'stop))))
 
-    (candidates (psc-ide-complete-impl arg company--manual-action))
+    ;; (candidates (psc-ide-complete-impl arg company--manual-action))
+    (candidates (psc-ide-company-fetcher arg))
 
     (sorted t)
 
@@ -182,12 +184,7 @@ in a buffer"
 (defun psc-ide-load-all ()
   "Loads all the modules in the current project"
   (interactive)
-  (psc-ide-send psc-ide-command-load-all))
-
-(defun psc-ide-complete ()
-  "Complete prefix string using psc-ide."
-  (interactive)
-  (psc-ide-complete-impl (psc-ide-ident-at-point)))
+  (psc-ide-send psc-ide-command-load-all (-const "yay")))
 
 (defun psc-ide-show-type ()
   "Show type of the symbol under cursor."
@@ -218,7 +215,7 @@ in a buffer"
   (interactive)
   (psc-ide-add-import-impl (psc-ide-ident-at-point)))
 
-(defun psc-ide-rebuild ()
+(defun psc-ide-rebuild (res)
   "Rebuild the current module"
   (interactive)
   (let* ((res (psc-ide-send (psc-ide-command-rebuild)))
@@ -323,17 +320,31 @@ use when the search used was with `string-match'."
               (push (psc-ide-extract-import-from-match-data) matches))))))
     matches))
 
-(defun psc-ide-send (cmd)
-  "Send a command to psc-ide."
-  (let* ((shellcmd (format "echo '%s'| %s"
-                           cmd
-                           psc-ide-client-executable))
-         (resp (shell-command-to-string shellcmd)))
-    ;; (message "Cmd %s\nReceived %s" cmd resp)
-    (condition-case err
-        (json-read-from-string resp)
-      (json-readtable-error
-       (error "It seems like the server is not running. You can start it using psc-ide-server-start.")))))
+(defun psc-ide-send (cmd callback)
+  (let* ((cb callback)
+         (proc (make-network-process
+                :name "psc-ide-server"
+                :family 'ipv4
+                :host "localhost"
+                :service 4242
+                :filter (wrap-psc-ide-callback cb))))
+    (process-send-string proc (s-prepend cmd "\n"))))
+
+(defun wrap-psc-ide-callback (callback)
+  "Wraps a function that expects a parsed psc-ide response"
+  (let ((cb callback))
+    (lambda (proc output)
+      (impl cb proc output))))
+
+(defun impl (callback proc output)
+  (let ((parsed (condition-case err
+                    (json-read-from-string output)
+                  (json-readtable-error
+                   (error
+                    (s-join " "
+                            '("It seems like the server is not running. You can"
+                              "start it using psc-ide-server-start.")))))))
+    (callback parsed)))
 
 (defun psc-ide-ask-project-dir ()
   "Ask psc-ide-server for the project dir."
@@ -482,6 +493,35 @@ Returns an plist with the search, qualifier, and relevant modules."
                     (type (cdr (assoc 'type x)))
                     (module (cdr (assoc 'module x))))
                 (funcall annotate type module qualifier completion))))))))
+
+(defun psc-ide-company-fetcher (prefix)
+  `(:async . ,(-partial 'psc-ide-complete-async prefix)))
+
+(defun psc-ide-complete-async (prefix callback)
+  (let ((command (psc-ide-command-complete [(psc-ide-filter-prefix prefix)]))
+        (handler (-partial 'psc-ide-handle-completionresponse callback)))
+    (psc-ide-send command handler)))
+
+(defun psc-ide-handle-completionresponse (callback response)
+  "Accepts a callback and a completion response from psc-ide,
+processes the response into a format suitable for company and
+passes it into the callback"
+  (let* ((result (psc-ide-unwrap-result response))
+         (completions (-map 'psc-ide-annotate-completion result)))
+    (callback completions)))
+
+(defun psc-ide-annotate-completion (completion)
+  "Turns a completion from psc-ide into a string with
+  text-properties, which carry additional information"
+  (let ((identifier (cdr (assoc 'identifier x)))
+        (type (cdr (assoc 'type x)))
+        (module (cdr (assoc 'module x))))
+    ;; :qualifier qualifier <- TODO: Add this back in
+    (add-text-properties 0 1 (list :type type
+                                   :module module) identifier)
+    ;; add-text-properties is sideeffecting and doesn't return the modified
+    ;; string, so we need to explicitly return the identifier from here
+    identifier))
 
 (defun psc-ide-show-type-impl (ident)
   "Returns a string that describes the type of IDENT.
