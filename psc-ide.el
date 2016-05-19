@@ -321,13 +321,12 @@ use when the search used was with `string-match'."
     matches))
 
 (defun psc-ide-send (cmd callback)
-  (let* ((cb callback)
-         (proc (make-network-process
-                :name "psc-ide-server"
-                :family 'ipv4
-                :host "localhost"
-                :service 4242
-                :filter (wrap-psc-ide-callback cb))))
+  (let ((proc (make-network-process
+               :name "psc-ide-server"
+               :family 'ipv4
+               :host "localhost"
+               :service 4242
+               :filter (wrap-psc-ide-callback callback))))
     (process-send-string proc (s-prepend cmd "\n"))))
 
 (defun wrap-psc-ide-callback (callback)
@@ -344,7 +343,7 @@ use when the search used was with `string-match'."
                     (s-join " "
                             '("It seems like the server is not running. You can"
                               "start it using psc-ide-server-start.")))))))
-    (callback parsed)))
+    (funcall callback parsed)))
 
 (defun psc-ide-ask-project-dir ()
   "Ask psc-ide-server for the project dir."
@@ -498,7 +497,8 @@ Returns an plist with the search, qualifier, and relevant modules."
   `(:async . ,(-partial 'psc-ide-complete-async prefix)))
 
 (defun psc-ide-complete-async (prefix callback)
-  (let ((command (psc-ide-command-complete [(psc-ide-filter-prefix prefix)]))
+  (let ((command (psc-ide-command-complete
+                  (vector (psc-ide-filter-prefix prefix))))
         (handler (-partial 'psc-ide-handle-completionresponse callback)))
     (psc-ide-send command handler)))
 
@@ -508,14 +508,14 @@ processes the response into a format suitable for company and
 passes it into the callback"
   (let* ((result (psc-ide-unwrap-result response))
          (completions (-map 'psc-ide-annotate-completion result)))
-    (callback completions)))
+    (funcall callback completions)))
 
 (defun psc-ide-annotate-completion (completion)
   "Turns a completion from psc-ide into a string with
   text-properties, which carry additional information"
-  (let ((identifier (cdr (assoc 'identifier x)))
-        (type (cdr (assoc 'type x)))
-        (module (cdr (assoc 'module x))))
+  (let ((identifier (cdr (assoc 'identifier completion)))
+        (type (cdr (assoc 'type completion)))
+        (module (cdr (assoc 'module completion))))
     ;; :qualifier qualifier <- TODO: Add this back in
     (add-text-properties 0 1 (list :type type
                                    :module module) identifier)
