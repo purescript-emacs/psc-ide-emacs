@@ -341,9 +341,22 @@ use when the search used was with `string-match'."
 
 (defun psc-ide-server-start-impl (dir-name)
   "Start psc-ide-server."
-  (apply #'start-process `("*psc-ide-server*" "*psc-ide-server*"
-                           ,@(split-string psc-ide-server-executable)
-                           "-d" ,dir-name)))
+  (apply 'start-process `("*psc-ide-server*" "*psc-ide-server*"
+                          ,@(psc-ide-server-command dir-name))))
+
+(defun psc-ide-server-command (dir-name)
+  "Tries to find the psc-ide-server-executable and builds up the
+  command by appending eventual options. Returns a list that can
+  be expanded and passed to start-process"
+  (let ((path (executable-find psc-ide-server-executable))
+        (port (number-to-string psc-ide-port))
+        (directory (expand-file-name dir-name))
+        (debug-flag (when psc-ide-debug "--debug")))
+    (if path
+        (remove nil `(,path "-p" ,port "-d" ,directory ,debug-flag))
+      (error (s-join " " '("Couldn't locate the psc-ide-server executable. You"
+                           "could either customize the psc-ide-server-executable"
+                           "setting, or put the executable on your path."))))))
 
 (defun psc-ide-load-module-impl (module-name)
   "Load PureScript module and its dependencies."
