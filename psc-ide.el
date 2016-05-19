@@ -326,16 +326,11 @@ use when the search used was with `string-match'."
                :family 'ipv4
                :host "localhost"
                :service 4242
-               :filter (wrap-psc-ide-callback callback))))
+               :filter (-partial 'wrap-psc-ide-callback callback))))
     (process-send-string proc (s-prepend cmd "\n"))))
 
-(defun wrap-psc-ide-callback (callback)
+(defun wrap-psc-ide-callback (callback proc output)
   "Wraps a function that expects a parsed psc-ide response"
-  (let ((cb callback))
-    (lambda (proc output)
-      (impl cb proc output))))
-
-(defun impl (callback proc output)
   (let ((parsed (condition-case err
                     (json-read-from-string output)
                   (json-readtable-error
