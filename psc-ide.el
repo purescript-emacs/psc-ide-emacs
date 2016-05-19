@@ -221,8 +221,7 @@ in a buffer"
 (defun psc-ide-rebuild ()
   "Rebuild the current module"
   (interactive)
-  (let* ((res (json-read-from-string
-               (psc-ide-send (psc-ide-command-rebuild))))
+  (let* ((res (psc-ide-send (psc-ide-command-rebuild)))
          (is-success (string= "success" (cdr (assoc 'resultType res))))
          (result (cdr (assoc 'result res))))
 
@@ -263,19 +262,17 @@ in a buffer"
 (defun psc-ide-case-split-impl (type)
   "Case Split on identifier under cursor"
   (let ((reg (psc-ide-ident-pos-at-point)))
-    (psc-ide-unwrap-result (json-read-from-string
-                            (psc-ide-send (psc-ide-command-case-split
-                                           (substring (thing-at-point 'line t) 0 -1)
-                                           (save-excursion (goto-char (car reg)) (current-column))
-                                           (save-excursion (goto-char (cdr reg)) (current-column))
-                                           type))))))
+    (psc-ide-unwrap-result (psc-ide-send (psc-ide-command-case-split
+                                          (substring (thing-at-point 'line t) 0 -1)
+                                          (save-excursion (goto-char (car reg)) (current-column))
+                                          (save-excursion (goto-char (cdr reg)) (current-column))
+                                          type)))))
 
 (defun psc-ide-add-clause-impl ()
   "Add clause on identifier under cursor"
   (let ((reg (psc-ide-ident-pos-at-point)))
-    (psc-ide-unwrap-result (json-read-from-string
-                            (psc-ide-send (psc-ide-command-add-clause
-                                           (substring (thing-at-point 'line t) 0 -1) nil))))))
+    (psc-ide-unwrap-result (psc-ide-send (psc-ide-command-add-clause
+                                          (substring (thing-at-point 'line t) 0 -1) nil)))))
 
 (defun psc-ide-get-module-name ()
   "Return the qualified name of the module in the current buffer."
@@ -333,7 +330,10 @@ use when the search used was with `string-match'."
                            psc-ide-client-executable))
          (resp (shell-command-to-string shellcmd)))
     ;; (message "Cmd %s\nReceived %s" cmd resp)
-    resp))
+    (condition-case err
+        (json-read-from-string resp)
+      (json-readtable-error
+       (error "It seems like the server is not running. You can start it using psc-ide-server-start.")))))
 
 (defun psc-ide-ask-project-dir ()
   "Ask psc-ide-server for the project dir."
@@ -360,9 +360,8 @@ use when the search used was with `string-match'."
 
 (defun psc-ide-load-module-impl (module-name)
   "Load PureScript module and its dependencies."
-  (psc-ide-unwrap-result (json-read-from-string
-                          (psc-ide-send (psc-ide-command-load
-                                         [] (list module-name))))))
+  (psc-ide-unwrap-result (psc-ide-send (psc-ide-command-load
+                                        [] (list module-name)))))
 
 (defun psc-ide-add-import-impl (identifier &optional filters)
   "Invoke the addImport command"
@@ -371,8 +370,7 @@ use when the search used was with `string-match'."
          (result (progn
                    (write-region (point-min) (point-max) tmp-file)
                    (psc-ide-unwrap-result
-                    (json-read-from-string
-                     (psc-ide-send (psc-ide-command-add-import identifier filters tmp-file tmp-file)))))))
+                     (psc-ide-send (psc-ide-command-add-import identifier filters tmp-file tmp-file))))))
     (if (not (stringp result))
         (let ((selection
                (completing-read "Which Module to import from: "
@@ -418,7 +416,6 @@ unchanged."
 
 (defun psc-ide-qualified-p (name)
   (s-contains-p "." name))
-
 
 (defun psc-ide-get-ident-context (prefix imports)
   "Split the prefix into the qualifier and search term from PREFIX.
@@ -469,12 +466,11 @@ Returns an plist with the search, qualifier, and relevant modules."
            (prefilter (psc-ide-filter-prefix prefix))
            (filters (-non-nil (list (psc-ide-make-module-filter "modules" moduleFilters) prefilter)))
            (result (psc-ide-unwrap-result
-                    (json-read-from-string
-                     (psc-ide-send (psc-ide-command-complete
-                                      (if nofilter
-                                          (vector prefilter) ;; (vconcat nil) = []
-                                        (vconcat filters))
-                                      nil (psc-ide-get-module-name)))))))
+                    (psc-ide-send (psc-ide-command-complete
+                                   (if nofilter
+                                       (vector prefilter) ;; (vconcat nil) = []
+                                     (vconcat filters))
+                                   nil (psc-ide-get-module-name))))))
       (->> result
            (remove-if-not
             (lambda (x)
@@ -500,8 +496,7 @@ Returns NIL if the type of IDENT is not found."
          (resp (psc-ide-send (psc-ide-command-show-type
                               (vector (psc-ide-make-module-filter "modules" moduleFilters))
                               search)))
-         (result (psc-ide-unwrap-result (json-read-from-string
-                                         resp))))
+         (result (psc-ide-unwrap-result resp)))
     (when (not (zerop (length result)))
       (cdr (assoc 'type (aref result 0))))))
 
