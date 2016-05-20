@@ -97,9 +97,9 @@ in a buffer"
 
 (defconst psc-ide-import-regex
   (rx (and line-start "import" (1+ space) (opt (and "qualified" (1+ space)))
-        (group (and (1+ (any word "."))))
-        (opt (1+ space) "as" (1+ space) (group (and (1+ word))))
-        (opt (1+ space) "(" (group (0+ not-newline)) ")"))))
+           (group (and (1+ (any word "."))))
+           (opt (1+ space) "as" (1+ space) (group (and (1+ word))))
+           (opt (1+ space) "(" (group (0+ not-newline)) ")"))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -174,7 +174,7 @@ in a buffer"
 (defun psc-ide-server-quit ()
   "Quit 'psc-ide-server'."
   (interactive)
-  (psc-ide-send psc-ide-command-quit))
+  (psc-ide-send-sync psc-ide-command-quit))
 
 (defun psc-ide-load-module (module-name)
   "Provide module to load"
@@ -218,7 +218,7 @@ in a buffer"
 (defun psc-ide-rebuild (res)
   "Rebuild the current module"
   (interactive)
-  (let* ((res (psc-ide-send (psc-ide-command-rebuild)))
+  (let* ((res (psc-ide-send-sync (psc-ide-command-rebuild)))
          (is-success (string= "success" (cdr (assoc 'resultType res))))
          (result (cdr (assoc 'result res))))
 
@@ -259,25 +259,27 @@ in a buffer"
 (defun psc-ide-case-split-impl (type)
   "Case Split on identifier under cursor"
   (let ((reg (psc-ide-ident-pos-at-point)))
-    (psc-ide-unwrap-result (psc-ide-send (psc-ide-command-case-split
-                                          (substring (thing-at-point 'line t) 0 -1)
-                                          (save-excursion (goto-char (car reg)) (current-column))
-                                          (save-excursion (goto-char (cdr reg)) (current-column))
-                                          type)))))
+    (psc-ide-unwrap-result (psc-ide-send-sync
+                            (psc-ide-command-case-split
+                             (substring (thing-at-point 'line t) 0 -1)
+                             (save-excursion (goto-char (car reg)) (current-column))
+                             (save-excursion (goto-char (cdr reg)) (current-column))
+                             type)))))
 
 (defun psc-ide-add-clause-impl ()
   "Add clause on identifier under cursor"
   (let ((reg (psc-ide-ident-pos-at-point)))
-    (psc-ide-unwrap-result (psc-ide-send (psc-ide-command-add-clause
-                                          (substring (thing-at-point 'line t) 0 -1) nil)))))
+    (psc-ide-unwrap-result (psc-ide-send-sync (psc-ide-command-add-clause
+                                               (substring (thing-at-point 'line t) 0 -1) nil)))))
 
 (defun psc-ide-get-module-name ()
   "Return the qualified name of the module in the current buffer."
   (save-excursion
-   (save-restriction (widen)
-    (goto-char (point-min))
-    (when (re-search-forward "module +\\([A-Z][A-Za-z0-9.]*\\)" nil t)
-      (buffer-substring-no-properties (match-beginning 1) (match-end 1))))))
+    (save-restriction
+      (widen)
+      (goto-char (point-min))
+      (when (re-search-forward "module +\\([A-Z][A-Za-z0-9.]*\\)" nil t)
+        (buffer-substring-no-properties (match-beginning 1) (match-end 1))))))
 
 (defun psc-ide-parse-exposed (exposed)
   "Parsed the EXPOSED names from a qualified import."
@@ -320,13 +322,33 @@ use when the search used was with `string-match'."
               (push (psc-ide-extract-import-from-match-data) matches))))))
     matches))
 
+(defun psc-ide-send-sync (cmd)
+  (with-temp-buffer
+    (condition-case nil
+        (let ((proc (make-network-process
+                     :name "psc-ide-server"
+                     :buffer (buffer-name (current-buffer))
+                     :family 'ipv4
+                     :host "localhost"
+                     :service psc-ide-port)))
+          (process-send-string proc (s-prepend cmd "\n"))
+          ;; Wait for the process in a blocking manner for a maximum of 2
+          ;; seconds
+          (accept-process-output proc 2)
+          (-first-item (s-lines (buffer-string))))
+      (error
+       (error
+        (s-join " "
+                '("It seems like the server is not running. You can"
+                  "start it using psc-ide-server-start.")))))))
+
 (defun psc-ide-send (cmd callback)
   (condition-case err
       (let ((proc (make-network-process
                    :name "psc-ide-server"
                    :family 'ipv4
                    :host "localhost"
-                   :service 4242
+                   :service psc-ide-port
                    :filter (-partial 'wrap-psc-ide-callback callback))))
         (process-send-string proc (s-prepend cmd "\n")))
     ;; Catch all the errors that happen when trying to connect
@@ -368,8 +390,9 @@ use when the search used was with `string-match'."
 
 (defun psc-ide-load-module-impl (module-name)
   "Load PureScript module and its dependencies."
-  (psc-ide-unwrap-result (psc-ide-send (psc-ide-command-load
-                                        [] (list module-name)))))
+  (psc-ide-unwrap-result
+   (psc-ide-send-sync (psc-ide-command-load
+                       [] (list module-name)))))
 
 (defun psc-ide-add-import-impl (identifier &optional filters)
   "Invoke the addImport command"
@@ -378,7 +401,7 @@ use when the search used was with `string-match'."
          (result (progn
                    (write-region (point-min) (point-max) tmp-file)
                    (psc-ide-unwrap-result
-                     (psc-ide-send (psc-ide-command-add-import identifier filters tmp-file tmp-file))))))
+                    (psc-ide-send-sync (psc-ide-command-add-import identifier filters tmp-file tmp-file))))))
     (if (not (stringp result))
         (let ((selection
                (completing-read "Which Module to import from: "
@@ -474,11 +497,12 @@ Returns an plist with the search, qualifier, and relevant modules."
            (prefilter (psc-ide-filter-prefix prefix))
            (filters (-non-nil (list (psc-ide-make-module-filter "modules" moduleFilters) prefilter)))
            (result (psc-ide-unwrap-result
-                    (psc-ide-send (psc-ide-command-complete
-                                   (if nofilter
-                                       (vector prefilter) ;; (vconcat nil) = []
-                                     (vconcat filters))
-                                   nil (psc-ide-get-module-name))))))
+                    (psc-ide-send-sync
+                     (psc-ide-command-complete
+                      (if nofilter
+                          (vector prefilter) ;; (vconcat nil) = []
+                        (vconcat filters))
+                      nil (psc-ide-get-module-name))))))
       (->> result
            (remove-if-not
             (lambda (x)
@@ -531,9 +555,10 @@ Returns NIL if the type of IDENT is not found."
          (search (plist-get pprefix 'search))
          (qualifier (plist-get pprefix 'qualifier))
          (moduleFilters (plist-get pprefix 'modules))
-         (resp (psc-ide-send (psc-ide-command-show-type
-                              (vector (psc-ide-make-module-filter "modules" moduleFilters))
-                              search)))
+         (resp (psc-ide-send-sync
+                (psc-ide-command-show-type
+                 (vector (psc-ide-make-module-filter "modules" moduleFilters))
+                 search)))
          (result (psc-ide-unwrap-result resp)))
     (when (not (zerop (length result)))
       (cdr (assoc 'type (aref result 0))))))
@@ -544,7 +569,7 @@ Returns NIL if the type of IDENT is not found."
 (defun psc-ide-suggest-project-dir ()
   (if (fboundp 'projectile-project-root)
       (projectile-project-root)
-      (file-name-directory (buffer-file-name))))
+    (file-name-directory (buffer-file-name))))
 
 (setq company-tooltip-align-annotations t)
 
