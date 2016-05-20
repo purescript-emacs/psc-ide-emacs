@@ -215,7 +215,7 @@ in a buffer"
   (interactive)
   (psc-ide-add-import-impl (psc-ide-ident-at-point)))
 
-(defun psc-ide-rebuild (res)
+(defun psc-ide-rebuild ()
   "Rebuild the current module"
   (interactive)
   (let* ((res (psc-ide-send-sync (psc-ide-command-rebuild)))
@@ -335,7 +335,7 @@ use when the search used was with `string-match'."
           ;; Wait for the process in a blocking manner for a maximum of 2
           ;; seconds
           (accept-process-output proc 2)
-          (-first-item (s-lines (buffer-string))))
+          (json-read-from-string (-first-item (s-lines (buffer-string)))))
       (error
        (error
         (s-join " "
