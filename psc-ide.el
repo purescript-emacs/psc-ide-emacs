@@ -482,11 +482,6 @@ Returns an plist with the search, qualifier, and relevant modules."
         (list 'search search 'qualifier nil 'modules (psc-ide-filter-bare-imports imports))
       (list 'search search 'qualifier qualifier 'modules (psc-ide-filter-imports-by-alias imports qualifier)))))
 
-
-(defun psc-ide-make-module-filter (type modules)
-  (list :filter type
-        :params (list :modules modules)))
-
 (defun psc-ide-filter-results-p (imports search qualifier result)
   (let ((completion (cdr (assoc 'identifier result)))
         (type (cdr (assoc 'type result)))
@@ -519,7 +514,7 @@ Returns an plist with the search, qualifier, and relevant modules."
                                                       :qualifier qualifier) str)
                        str))
            (prefilter (psc-ide-filter-prefix prefix))
-           (filters (-non-nil (list (psc-ide-make-module-filter "modules" moduleFilters) prefilter)))
+           (filters (-non-nil (list (psc-ide-filter-modules moduleFilters) prefilter)))
            (result (psc-ide-unwrap-result
                     (psc-ide-send-sync
                      (psc-ide-command-complete
@@ -581,7 +576,7 @@ Returns NIL if the type of IDENT is not found."
          (moduleFilters (plist-get pprefix 'modules))
          (resp (psc-ide-send-sync
                 (psc-ide-command-show-type
-                 (vector (psc-ide-make-module-filter "modules" moduleFilters))
+                 (vector (psc-ide-filter-modules moduleFilters))
                  search)))
          (result (psc-ide-unwrap-result resp)))
     (when (not (zerop (length result)))
