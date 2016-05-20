@@ -344,12 +344,14 @@ use when the search used was with `string-match'."
 
 (defun psc-ide-send (cmd callback)
   (condition-case err
-      (let ((proc (make-network-process
-                   :name "psc-ide-server"
-                   :family 'ipv4
-                   :host "localhost"
-                   :service psc-ide-port
-                   :filter (-partial 'wrap-psc-ide-callback callback))))
+      (let* ((buffer (generate-new-buffer "*psc-ide-client*"))
+             (proc (make-network-process
+                    :name "psc-ide-server"
+                    :buffer buffer
+                    :family 'ipv4
+                    :host "localhost"
+                    :service psc-ide-port
+                    :sentinel (-partial 'wrap-psc-ide-callback callback buffer))))
         (process-send-string proc (s-prepend cmd "\n")))
     ;; Catch all the errors that happen when trying to connect
     (error
@@ -358,10 +360,15 @@ use when the search used was with `string-match'."
               '("It seems like the server is not running. You can"
                 "start it using psc-ide-server-start."))))))
 
-(defun wrap-psc-ide-callback (callback proc output)
+(defun wrap-psc-ide-callback (callback buffer proc status)
   "Wraps a function that expects a parsed psc-ide response"
-  (let ((parsed (json-read-from-string output)))
-    (funcall callback parsed)))
+  (when (string= "closed" (process-status proc))
+    (let ((parsed
+           (with-current-buffer buffer
+             (json-read-from-string
+              (buffer-substring (point-min) (point-max))))))
+        (kill-buffer buffer)
+        (funcall callback parsed))))
 
 (defun psc-ide-ask-project-dir ()
   "Ask psc-ide-server for the project dir."
