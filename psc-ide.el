@@ -153,7 +153,7 @@ in a buffer"
 
     (annotation (psc-ide-annotation arg))
 
-    (meta (get-text-property 0 :type arg))
+    (meta (psc-ide-string-fontified (get-text-property 0 :type arg)))
 
     (post-completion
      (unless (or
@@ -191,7 +191,7 @@ in a buffer"
   (interactive)
   (let ((ident (psc-ide-ident-at-point)))
     (-if-let (type-description (psc-ide-show-type-impl ident))
-        (message type-description)
+        (message "%s" (psc-ide-string-fontified type-description))
       (message (concat "Know nothing about type of `%s'. "
                        "Have you loaded the corresponding module?")
                ident))))
@@ -585,7 +585,11 @@ Returns NIL if the type of IDENT is not found."
                  search)))
          (result (psc-ide-unwrap-result resp)))
     (when (not (zerop (length result)))
-      (cdr (assoc 'type (aref result 0))))))
+      (let* ((completion (aref result 0))
+             (type (cdr (assoc 'type completion)))
+             (module (cdr (assoc 'module completion)))
+            (identifier (cdr (assoc 'identifier completion))))
+        (s-concat module "." identifier " :: \n  " type)))))
 
 (defun psc-ide-annotation (s)
   (format " (%s)" (get-text-property 0 :module s)))
@@ -594,6 +598,15 @@ Returns NIL if the type of IDENT is not found."
   (if (fboundp 'projectile-project-root)
       (projectile-project-root)
     (file-name-directory (buffer-file-name))))
+
+(defun psc-ide-string-fontified (str)
+  "Takes a string and returns it with syntax highlighting."
+  (with-temp-buffer
+    (when (fboundp 'purescript-mode)
+      (purescript-mode))
+    (insert str)
+    (font-lock-fontify-buffer)
+    (buffer-string)))
 
 (setq company-tooltip-align-annotations t)
 
