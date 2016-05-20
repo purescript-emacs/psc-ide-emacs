@@ -218,21 +218,32 @@ in a buffer"
 (defun psc-ide-rebuild ()
   "Rebuild the current module"
   (interactive)
-  (let* ((res (psc-ide-send-sync (psc-ide-command-rebuild)))
-         (is-success (string= "success" (cdr (assoc 'resultType res))))
-         (result (cdr (assoc 'result res))))
+  (psc-ide-send (psc-ide-command-rebuild) 'psc-ide-rebuild-handler))
 
+(defun psc-ide-rebuild-handler (response)
+  "Accepts a rebuild response and either displays errors/warnings
+inside the *psc-ide-rebuild* buffer, or closes it if there were
+none."
+  (let ((is-success (string= "success" (cdr (assoc 'resultType response))))
+        (result (cdr (assoc 'result response))))
     (if (not is-success)
+        ;; Display the first reported error
         (let* ((first-error (aref result 0)))
-          (psc-ide-display-rebuild-error (psc-ide-pretty-json-error first-error))))
+          (psc-ide-display-rebuild-error
+           (psc-ide-pretty-json-error first-error))))
     (if (<= (length result) 0)
+        ;; If there are no warnings we close the rebuild buffer and print "OK"
         (progn
           (delete-windows-on (get-buffer-create "*psc-ide-rebuild*"))
           (message "OK"))
-      (let* ((first-warning (aref result 0)))
-        (psc-ide-display-rebuild-error (psc-ide-pretty-json-error first-warning))))))
+      (let ((first-warning (aref result 0)))
+        ;; Display the first reported warning
+        (psc-ide-display-rebuild-error
+         (psc-ide-pretty-json-error first-warning))))))
 
 (defun psc-ide-display-rebuild-error (err)
+  "Takes a parsed JSON error/warning and displays it in the
+rebuild buffer."
   (with-current-buffer (get-buffer-create "*psc-ide-rebuild*")
     (compilation-mode)
     (read-only-mode -1)
@@ -242,15 +253,20 @@ in a buffer"
   (display-buffer "*psc-ide-rebuild*")
   (set-window-point (get-buffer-window "*psc-ide-rebuild*") (point-min)))
 
-(defun psc-ide-pretty-json-error (first-error)
-  (let ((err-message (cdr (assoc 'message first-error)))
-        (err-filename (cdr (assoc 'filename first-error)))
-        (err-position (cdr (assoc 'position first-error))))
+(defun psc-ide-pretty-json-error (err)
+  "Formats a parsed JSON error/warning into a format that can be
+nicely displayed inside a compilation buffer."
+  (let ((err-message (cdr (assoc 'message err)))
+        (err-filename (cdr (assoc 'filename err)))
+        (err-position (cdr (assoc 'position err))))
     (if (not err-position)
         err-message
       (let ((err-column (cdr (assoc 'startColumn err-position)))
             (err-line (cdr (assoc 'startLine err-position))))
-        (concat err-filename ":" (number-to-string err-line) ":" (number-to-string err-column) ":" "\n" err-message)))))
+        (concat err-filename
+                ":" (number-to-string err-line)
+                ":" (number-to-string err-column)
+                ":" "\n" err-message)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -269,8 +285,9 @@ in a buffer"
 (defun psc-ide-add-clause-impl ()
   "Add clause on identifier under cursor"
   (let ((reg (psc-ide-ident-pos-at-point)))
-    (psc-ide-unwrap-result (psc-ide-send-sync (psc-ide-command-add-clause
-                                               (substring (thing-at-point 'line t) 0 -1) nil)))))
+    (psc-ide-unwrap-result (psc-ide-send-sync
+                            (psc-ide-command-add-clause
+                             (substring (thing-at-point 'line t) 0 -1) nil)))))
 
 (defun psc-ide-get-module-name ()
   "Return the qualified name of the module in the current buffer."
