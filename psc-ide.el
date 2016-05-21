@@ -7,7 +7,7 @@
 ;;            Christoph Hegemann
 ;; Homepage : https://github.com/epost/psc-ide-emacs
 ;; Version  : 0.1.0
-;; Package-Requires: ((dash "2.11.0") (company "0.8.7") (cl-lib "0.5") (s "1.10.0"))
+;; Package-Requires: ((dash "2.12.1") (dash-functional "1.2.0") (company "0.8.7") (cl-lib "0.5") (s "1.10.0"))
 ;; Keywords : languages
 
 ;;; Commentary:
@@ -303,7 +303,6 @@ use when the search used was with `string-match'."
          result)
     (push `(module . ,(match-string-no-properties 1 string)) result)
     (push `(alias . ,(match-string-no-properties 2 string)) result)
-    (push `(exposing . ,(psc-ide-parse-exposed (match-string-no-properties 3 string))) result)
     result))
 
 (defun psc-ide-parse-imports-in-buffer (&optional buffer)
@@ -335,6 +334,7 @@ use when the search used was with `string-match'."
           ;; Wait for the process in a blocking manner for a maximum of 2
           ;; seconds
           (accept-process-output proc 2)
+          (delete-process proc)
           (json-read-from-string (-first-item (s-lines (buffer-string)))))
       (error
        (error
