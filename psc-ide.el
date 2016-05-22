@@ -125,7 +125,6 @@ in a buffer"
   (set (make-local-variable 'psc-ide-buffer-import-list)
        (psc-ide-parse-imports-in-buffer)))
 
-
 (defun company-psc-ide-backend (command &optional arg &rest ignored)
   "The psc-ide backend for 'company-mode'."
   (interactive (list 'interactive))
@@ -138,7 +137,13 @@ in a buffer"
     (prefix (when (and (eq major-mode 'purescript-mode)
                        (not (company-in-string-or-comment)))
               (let ((symbol (company-grab-symbol)))
-                (if symbol symbol 'stop))))
+                (if symbol
+                    ;; We strip of the qualifier so that it doesn't get
+                    ;; overwritten when completing.
+                    (if (s-contains-p "." symbol)
+                        (cons (car (last (s-split "\\." symbol))) t)
+                      symbol)
+                  'stop))))
 
     (candidates (psc-ide-company-fetcher arg company--manual-action))
 
@@ -153,7 +158,7 @@ in a buffer"
               ;; Don't add an import when the option to do so is disabled
               (not psc-ide-add-import-on-completion)
               ;; or when a qualified identifier was completed
-              (get-text-property 0 :qualifier arg))
+              (s-contains-p "." (company-grab-symbol)))
        (psc-ide-add-import-impl arg (vector
                                      (psc-ide-filter-modules
                                       (list (get-text-property 0 :module arg)))))))))
@@ -423,8 +428,12 @@ use when the search used was with `string-match'."
                (insert-file-contents tmp-file nil nil nil t))))
     (delete-file tmp-file)))
 
-(defun psc-ide-company-fetcher (prefix &optional manual)
-  `(:async . ,(-partial 'psc-ide-complete-async prefix manual)))
+(defun psc-ide-company-fetcher (ignored &optional manual)
+  "Grabs the symbol at point at creates an asynchronouse
+completer. We ignore the prefix we get from company, because it
+doesn't contain eventual qualifiers."
+  (let ((prefix (company-grab-symbol)))
+  `(:async . ,(-partial 'psc-ide-complete-async prefix manual))))
 
 (defun psc-ide-complete-async (prefix manual callback)
   (let ((command (psc-ide-build-completion-command prefix manual))
@@ -442,7 +451,7 @@ The cases we have to cover:
          (alias (s-join "." (butlast components))))
     (if (not (s-blank? alias))
         ;; 1. List.fil <- filter by prefix and List module
-        (psc-ide--qualified-completion-command prefix alias)
+        (psc-ide-qualified-completion-command prefix alias)
       (if manual
           ;; 2. fil| + manual <- don't filter at all
           (psc-ide-command-complete
@@ -455,12 +464,9 @@ The cases we have to cover:
 (defun psc-ide-qualified-completion-command (prefix alias)
   "Builds a completion command for a PREFIX with ALIAS"
   (let ((modules (psc-ide-modules-for-alias alias)))
-    (if modules
-        (psc-ide-command-complete
-         (vector (psc-ide-filter-prefix prefix)
-                 (psc-ide-filter-modules modules)))
-      (psc-ide-command-complete
-       (vector (psc-ide-filter-prefix prefix))))))
+    (psc-ide-command-complete
+     (vector (psc-ide-filter-prefix prefix)
+             (psc-ide-filter-modules (vconcat modules))))))
 
 (defun psc-ide-all-imported-modules ()
   "Retrieves all imported modules for a buffer"
