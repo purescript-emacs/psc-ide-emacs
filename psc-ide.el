@@ -543,8 +543,7 @@ Returns NIL if the type of SEARCH is not found."
 (defun psc-ide-string-fontified (str)
   "Takes a string and returns it with syntax highlighting."
   (with-temp-buffer
-    (when (fboundp 'purescript-mode)
-      (purescript-mode))
+    (turn-on-purescript-font-lock)
     (insert str)
     (font-lock-fontify-buffer)
     (buffer-string)))
