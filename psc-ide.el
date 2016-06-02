@@ -95,6 +95,11 @@ in a buffer"
   :group 'psc-ide
   :type 'boolean)
 
+(defcustom psc-ide-disable-flycheck nil
+  "Whether to disable flycheck syntax functionality"
+  :group 'psc-ide
+  :type  'boolean)
+
 (defconst psc-ide-import-regex
   (rx (and line-start "import" (1+ space) (opt (and "qualified" (1+ space)))
            (group (and (1+ (any word "."))))
@@ -124,6 +129,11 @@ in a buffer"
 
   (set (make-local-variable 'psc-ide-buffer-import-list)
        (psc-ide-parse-imports-in-buffer)))
+
+(with-eval-after-load 'flycheck
+  (when (not psc-ide-disable-flycheck)
+    (require 'psc-ide-flycheck)
+    (psc-ide-flycheck-setup)))
 
 (defun company-psc-ide-backend (command &optional arg &rest ignored)
   "The psc-ide backend for 'company-mode'."

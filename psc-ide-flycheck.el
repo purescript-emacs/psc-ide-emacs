@@ -1,10 +1,11 @@
 ;;; psc-ide-flycheck.el --- Flycheck support for the purescript language -*- lexical-binding: t -*-
 
-;; Copyright (c) 2015 Brian Sermons
+;; Copyright (c) 2015 The psc-ide-emacs authors
 
 ;; Author: Brian Sermons
+;;         Bodil Stokke <bodil@bodil.org>
 ;; Package-Requires: ((flycheck "0.24") (emacs "24.4"))
-;; URL: https://github.com/bsermons/psc-ide-flycheck
+;; URL: https://github.com/epost/psc-ide-emacs
 
 ;; This file is not part of GNU Emacs.
 
@@ -34,15 +35,29 @@
 (require 'psc-ide)
 
 
+(flycheck-def-option-var psc-ide-flycheck-ignored-error-codes nil psc-ide
+  "List of errors codes to ignore."
+  :tag "Flycheck PscIde Ignored Error Codes"
+  :type '(repeat string))
+
 (defun psc-ide-flycheck-decode-purescript-error (checker type error)
   (let* ((position (assoc 'position error))
+         (error-code (cdr (assoc 'errorCode error)))
+         ;; (end-line (cdr (assoc 'endLine position)))
+         ;; (end-col (cdr (assoc 'endColumn position)))
+         (err-msg (cdr (assoc 'message error)))
+         (filename (cdr (assoc 'filename error)))
          (start-line (cdr (assoc 'startLine position)))
-         (start-col (cdr (assoc 'column position))))
-    (flycheck-error-new-at (or start-line 1)
-                           (or start-col 1)
-                           type
-                           (cdr (assoc 'message error))
-                           :checker checker)))
+         (start-col (cdr (assoc 'startColumn position))))
+    (when (not (-contains? psc-ide-flycheck-ignored-error-codes error-code))
+      (flycheck-error-new-at (or start-line 1)
+                             (or start-col 1)
+                             type
+                             err-msg
+                             :id (concat filename
+                                         ":" (number-to-string start-line)
+                                         ":" (number-to-string start-col))
+                             :checker checker))))
 
 (defun psc-ide-flycheck-read-json (str)
   (let* ((json-array-type 'list))
@@ -55,11 +70,60 @@
   (let* ((resultType (pcase (cdr (assoc 'resultType data))
                          (`success 'warning)
                          (_ 'error)))
-         (errors (mapcar
-                  (lambda (x) (psc-ide-flycheck-decode-purescript-error checker resultType x))
-                  (cdr (assoc 'result data)))))
-    errors))
+         (result (cdr (assoc 'result data)))
+         (errors (-filter #'identity
+                          (mapcar
+                           (lambda (x) (psc-ide-flycheck-decode-purescript-error checker resultType x))
+                           result))))
+         errors))
 
+(defun psc-ide-flycheck-save-suggestions (errs)
+  (setq-local
+   psc-ide-flycheck-suggestions
+   (-map
+    (lambda (err)
+      (let* ((err-filename (cdr (assoc 'filename err)))
+             (err-position (cdr (assoc 'position err)))
+             (err-line (cdr (assoc 'startLine err-position)))
+             (err-column (cdr (assoc 'startColumn err-position)))
+             (err-id (concat err-filename ":" (number-to-string err-line)
+                             ":" (number-to-string err-column))))
+        (cons err-id err)))
+    (-filter (lambda (i) (and (cdr (assoc 'position i))
+                              (cdr (assoc 'suggestion i))))
+             errs))))
+
+(defun psc-ide-flycheck-insert-suggestion ()
+  (interactive)
+  (let* ((id (flycheck-error-id (car (flycheck-overlay-errors-at (point)))))
+          (err (cdr (assoc id psc-ide-flycheck-suggestions)))
+          (pos (cdr (assoc 'position err)))
+          (sugg (cdr (assoc 'suggestion err))))
+    (if (and pos sugg)
+        (let* ((start (save-excursion
+                        (goto-char (point-min))
+                        (forward-line (- (cdr (assoc 'startLine pos)) 1))
+                        (move-to-column (- (cdr (assoc 'startColumn pos)) 1))
+                        (point)))
+                (end (save-excursion
+                      (goto-char (point-min))
+                      (forward-line (- (cdr (assoc 'endLine pos)) 1))
+                      (move-to-column (- (cdr (assoc 'endColumn pos)) 1))
+                      (point))))
+          (progn
+            (kill-region start end)
+            (goto-char start)
+            (let ((new-end
+                    (save-excursion
+                      (insert (cdr (assoc 'replacement sugg)))
+                      (point))))
+              (set-mark start)
+              (goto-char new-end)
+              (setq deactivate-mark nil))))
+      (message "No suggestion available!"))))
+
+(define-key purescript-mode-map (kbd "C-c M-s")
+  'psc-ide-flycheck-insert-suggestion)
 
 (defun psc-ide-flycheck-start (checker callback)
   "Start a psc-ide syntax check with CHECKER.
@@ -68,6 +132,7 @@ CALLBACK is the status callback passed by flycheck."
   (condition-case err
     (psc-ide-send (psc-ide-command-rebuild)
                   (lambda (result)
+                    (psc-ide-flycheck-save-suggestions (append (cdr (assoc 'result result)) nil))
                     (let ((errors (psc-ide-flycheck-parse-errors result checker)))
                       (funcall callback 'finished errors))))
     (error (funcall callback 'errored (error-message-string err)))))
