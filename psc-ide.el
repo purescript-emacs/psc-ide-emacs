@@ -358,22 +358,25 @@ use when the search used was with `string-match'."
                   "start it using psc-ide-server-start.")))))))
 
 (defun psc-ide-send (cmd callback)
-  (condition-case err
-      (let* ((buffer (generate-new-buffer "*psc-ide-client*"))
-             (proc (make-network-process
-                    :name "psc-ide-server"
-                    :buffer buffer
-                    :family 'ipv4
-                    :host "localhost"
-                    :service psc-ide-port
-                    :sentinel (-partial 'wrap-psc-ide-callback callback buffer))))
-        (process-send-string proc (s-prepend cmd "\n")))
-    ;; Catch all the errors that happen when trying to connect
-    (error
-     (error
-      (s-join " "
-              '("It seems like the server is not running. You can"
-                "start it using psc-ide-server-start."))))))
+  (let ((buffer (generate-new-buffer "*psc-ide-client*")))
+    (condition-case err
+        (let* (
+               (proc (make-network-process
+                      :name "psc-ide-server"
+                      :buffer buffer
+                      :family 'ipv4
+                      :host "localhost"
+                      :service psc-ide-port
+                      :sentinel (-partial 'wrap-psc-ide-callback callback buffer))))
+          (process-send-string proc (s-prepend cmd "\n")))
+      ;; Catch all the errors that happen when trying to connect
+      (error
+       (progn
+         (kill-buffer buffer)
+         (error
+          (s-join " "
+                  '("It seems like the server is not running. You can"
+                    "start it using psc-ide-server-start."))))))))
 
 (defun wrap-psc-ide-callback (callback buffer proc status)
   "Wraps a function that expects a parsed psc-ide response"
