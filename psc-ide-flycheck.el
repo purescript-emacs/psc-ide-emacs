@@ -128,13 +128,14 @@
   "Start a psc-ide syntax check with CHECKER.
 
 CALLBACK is the status callback passed by flycheck."
-  (condition-case err
     (psc-ide-send (psc-ide-command-rebuild)
                   (lambda (result)
-                    (psc-ide-flycheck-save-suggestions (append (cdr (assoc 'result result)) nil))
-                    (let ((errors (psc-ide-flycheck-parse-errors result checker)))
-                      (funcall callback 'finished errors))))
-    (error (funcall callback 'errored (error-message-string err)))))
+                    (condition-case err
+                        (progn
+                          (psc-ide-flycheck-save-suggestions (append (cdr (assoc 'result result)) nil))
+                          (let ((errors (psc-ide-flycheck-parse-errors result checker)))
+                            (funcall callback 'finished errors)))
+                      (error (funcall callback 'errored (error-message-string err)))))))
 
 (flycheck-define-generic-checker 'psc-ide
   "A purescript syntax checker using the `psc-ide' interface."
