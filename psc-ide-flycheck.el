@@ -32,7 +32,6 @@
 (require 'cl-lib)
 (require 'json)
 (require 'flycheck)
-(require 'psc-ide)
 
 
 (flycheck-def-option-var psc-ide-flycheck-ignored-error-codes nil psc-ide
