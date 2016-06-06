@@ -360,14 +360,13 @@ use when the search used was with `string-match'."
 (defun psc-ide-send (cmd callback)
   (let ((buffer (generate-new-buffer "*psc-ide-client*")))
     (condition-case err
-        (let* (
-               (proc (make-network-process
-                      :name "psc-ide-server"
-                      :buffer buffer
-                      :family 'ipv4
-                      :host "localhost"
-                      :service psc-ide-port
-                      :sentinel (-partial 'wrap-psc-ide-callback callback buffer))))
+        (let ((proc (make-network-process
+                     :name "psc-ide-server"
+                     :buffer buffer
+                     :family 'ipv4
+                     :host "localhost"
+                     :service psc-ide-port
+                     :sentinel (-partial 'wrap-psc-ide-callback callback buffer))))
           (process-send-string proc (s-prepend cmd "\n")))
       ;; Catch all the errors that happen when trying to connect
       (error

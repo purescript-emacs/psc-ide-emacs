@@ -46,11 +46,11 @@
          ;; (end-col (cdr (assoc 'endColumn position)))
          (err-msg (cdr (assoc 'message error)))
          (filename (cdr (assoc 'filename error)))
-         (start-line (cdr (assoc 'startLine position)))
-         (start-col (cdr (assoc 'startColumn position))))
+         (start-line (or (cdr (assoc 'startLine position)) 1))
+         (start-col (or (cdr (assoc 'startColumn position)) 1)))
     (when (not (-contains? psc-ide-flycheck-ignored-error-codes error-code))
-      (flycheck-error-new-at (or start-line 1)
-                             (or start-col 1)
+      (flycheck-error-new-at start-line
+                             start-col
                              type
                              err-msg
                              :id (concat filename
@@ -135,7 +135,8 @@ CALLBACK is the status callback passed by flycheck."
                           (psc-ide-flycheck-save-suggestions (append (cdr (assoc 'result result)) nil))
                           (let ((errors (psc-ide-flycheck-parse-errors result checker)))
                             (funcall callback 'finished errors)))
-                      (error (funcall callback 'errored (error-message-string err)))))))
+                      (error
+                       (funcall callback 'errored (error-message-string err)))))))
 
 (flycheck-define-generic-checker 'psc-ide
   "A purescript syntax checker using the `psc-ide' interface."
