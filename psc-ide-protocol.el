@@ -1,4 +1,61 @@
+;;; -*- lexical-binding: t -*-
 (require 'json)
+(require 'dash-functional)
+(require 's)
+
+(defun psc-ide-send-sync (cmd)
+  (with-temp-buffer
+    (condition-case nil
+        (let ((proc (make-network-process
+                     :name "psc-ide-server"
+                     :buffer (buffer-name (current-buffer))
+                     :family 'ipv4
+                     :host "localhost"
+                     :service psc-ide-port)))
+          (process-send-string proc (s-prepend cmd "\n"))
+          ;; Wait for the process in a blocking manner for a maximum of 2
+          ;; seconds
+          (accept-process-output proc 2)
+          (delete-process proc)
+          (json-read-from-string (-first-item (s-lines (buffer-string)))))
+      (error
+       (error
+        (s-join " "
+                '("It seems like the server is not running. You can"
+                  "start it using psc-ide-server-start.")))))))
+
+(defun psc-ide-send (cmd callback)
+  (let ((buffer (generate-new-buffer "*psc-ide-client*")))
+    (condition-case err
+        (let ((proc (make-network-process
+                     :name "psc-ide-server"
+                     :buffer buffer
+                     :family 'ipv4
+                     :host "localhost"
+                     :service psc-ide-port
+                     :sentinel (-partial 'wrap-psc-ide-callback callback buffer (current-buffer)))))
+          (process-send-string proc (s-prepend cmd "\n")))
+      ;; Catch all the errors that happen when trying to connect
+      (error
+       (progn
+         (kill-buffer buffer)
+         (error
+          (s-join " "
+                  '("It seems like the server is not running. You can"
+                    "start it using psc-ide-server-start."))))))))
+
+(defun wrap-psc-ide-callback (callback buffer current proc status)
+  "Wraps a function that expects a parsed psc-ide response.
+Evaluates the CALLBACK in the context of the CURRENT buffer that initiated call if it still exists."
+  (when (string= "closed" (process-status proc))
+    (let ((parsed
+           (with-current-buffer buffer
+             (json-read-from-string
+              (buffer-substring (point-min) (point-max))))))
+        (kill-buffer buffer)
+        (when (buffer-live-p current)
+          (with-current-buffer current
+            (funcall callback parsed))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;

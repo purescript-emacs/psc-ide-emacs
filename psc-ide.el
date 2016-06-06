@@ -95,6 +95,11 @@ in a buffer"
   :group 'psc-ide
   :type 'boolean)
 
+(defcustom psc-ide-disable-flycheck nil
+  "Whether to disable flycheck syntax functionality"
+  :group 'psc-ide
+  :type  'boolean)
+
 (defconst psc-ide-import-regex
   (rx (and line-start "import" (1+ space) (opt (and "qualified" (1+ space)))
            (group (and (1+ (any word "."))))
@@ -124,6 +129,11 @@ in a buffer"
 
   (set (make-local-variable 'psc-ide-buffer-import-list)
        (psc-ide-parse-imports-in-buffer)))
+
+(with-eval-after-load 'flycheck
+  (when (not psc-ide-disable-flycheck)
+    (require 'psc-ide-flycheck)
+    (psc-ide-flycheck-setup)))
 
 (defun company-psc-ide-backend (command &optional arg &rest ignored)
   "The psc-ide backend for 'company-mode'."
@@ -326,54 +336,6 @@ use when the search used was with `string-match'."
               (push (psc-ide-extract-import-from-match-data) matches))))))
     matches))
 
-(defun psc-ide-send-sync (cmd)
-  (with-temp-buffer
-    (condition-case nil
-        (let ((proc (make-network-process
-                     :name "psc-ide-server"
-                     :buffer (buffer-name (current-buffer))
-                     :family 'ipv4
-                     :host "localhost"
-                     :service psc-ide-port)))
-          (process-send-string proc (s-prepend cmd "\n"))
-          ;; Wait for the process in a blocking manner for a maximum of 2
-          ;; seconds
-          (accept-process-output proc 2)
-          (delete-process proc)
-          (json-read-from-string (-first-item (s-lines (buffer-string)))))
-      (error
-       (error
-        (s-join " "
-                '("It seems like the server is not running. You can"
-                  "start it using psc-ide-server-start.")))))))
-
-(defun psc-ide-send (cmd callback)
-  (condition-case err
-      (let* ((buffer (generate-new-buffer "*psc-ide-client*"))
-             (proc (make-network-process
-                    :name "psc-ide-server"
-                    :buffer buffer
-                    :family 'ipv4
-                    :host "localhost"
-                    :service psc-ide-port
-                    :sentinel (-partial 'wrap-psc-ide-callback callback buffer))))
-        (process-send-string proc (s-prepend cmd "\n")))
-    ;; Catch all the errors that happen when trying to connect
-    (error
-     (error
-      (s-join " "
-              '("It seems like the server is not running. You can"
-                "start it using psc-ide-server-start."))))))
-
-(defun wrap-psc-ide-callback (callback buffer proc status)
-  "Wraps a function that expects a parsed psc-ide response"
-  (when (string= "closed" (process-status proc))
-    (let ((parsed
-           (with-current-buffer buffer
-             (json-read-from-string
-              (buffer-substring (point-min) (point-max))))))
-        (kill-buffer buffer)
-        (funcall callback parsed))))
 
 (defun psc-ide-ask-project-dir ()
   "Ask psc-ide-server for the project dir."
