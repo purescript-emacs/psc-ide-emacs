@@ -74,16 +74,26 @@
 
     [[http://i.imgur.com/c0L6C4B.gif]]
 
+*** Flycheck Support
+**** Ignore certain errors or warnings
+This is determined by the variable ~psc-ide-flycheck-ignored-error-codes~. It can be configured
+with ~customize-option~ or similar methods.
+
+**** Insert suggestion from error ~C-c M-s~
+When the cursor is placed over an error that includes suggestion information, use ~C-c M-s~ to 
+apply the suggestion.
+
 *** Keybindings
 
-   | Key         | Function               |
-   |-------------+------------------------|
-   | ~C-c C-s~   | ~psc-ide-server-start~ |
-   | ~C-c C-q~   | ~psc-ide-server-quit~  |
-   | ~C-c C-l~   | ~psc-ide-load-all~     |
-   | ~C-c C-a~   | ~psc-ide-add-clause~   |
-   | ~C-c C-c~   | ~psc-ide-case-split~   |
-   | ~C-c C-i~   | ~psc-ide-add-import~   |
-   | ~C-c C-t~   | ~psc-ide-show-type~    |
-   | ~C-c C-b~   | ~psc-ide-rebuild~      |
-   | ~C-c C-S-l~ | ~psc-ide-load-module~  |
+   | Key         | Function                             |
+   |-------------+--------------------------------------|
+   | ~C-c C-s~   | ~psc-ide-server-start~               |
+   | ~C-c C-q~   | ~psc-ide-server-quit~                |
+   | ~C-c C-l~   | ~psc-ide-load-all~                   |
+   | ~C-c C-a~   | ~psc-ide-add-clause~                 |
+   | ~C-c C-c~   | ~psc-ide-case-split~                 |
+   | ~C-c C-i~   | ~psc-ide-add-import~                 |
+   | ~C-c C-t~   | ~psc-ide-show-type~                  |
+   | ~C-c C-b~   | ~psc-ide-rebuild~                    |
+   | ~C-c C-S-l~ | ~psc-ide-load-module~                |
+   | ~C-c M-s~   | ~psc-ide-flycheck-insert-suggestion~ |
