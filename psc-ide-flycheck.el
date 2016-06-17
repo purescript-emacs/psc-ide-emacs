@@ -33,8 +33,11 @@
 
 (defun psc-ide-flycheck-parse-errors (data checker)
   "Decode purescript json output errors from DATA with CHECKER."
-  (let (errors)
-    (let-alist data
+  (let-alist data
+    (let ((errors)
+          (resultType (pcase .resultType
+                        (`"success" 'warning)
+                        (_ 'error))))
       (seq-do (lambda (err)
                 (let-alist err
                   (unless (member .errorCode psc-ide-flycheck-ignored-error-codes)
@@ -47,14 +50,14 @@
                     (push (flycheck-error-new-at
                            .position.startLine
                            .position.startColumn
-                           'error
+                           resultType
                            .message
                            :id .errorCode
                            :checker checker
                            :filename .filename)
                           errors))))
-              .result))
-    errors))
+              .result)
+      errors)))
 
 ;;;###autoload
 (defun psc-ide-flycheck-insert-suggestion ()
