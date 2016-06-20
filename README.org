@@ -69,7 +69,7 @@
     [[http://i.imgur.com/r6rl2lT.gif]]
 
 *** Rebuild the current module and get quick error reporting ~C-c C-b~
-    If you set ~(custom-set-variables 'psc-ide-rebuild-on-save t)~ psc-ide will
+    If you set ~(customize-set-variable 'psc-ide-rebuild-on-save t)~ psc-ide will
     try to rebuild your module on every save.
 
     [[http://i.imgur.com/c0L6C4B.gif]]
