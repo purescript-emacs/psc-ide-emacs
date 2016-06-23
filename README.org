@@ -26,7 +26,8 @@
    (add-hook 'purescript-mode-hook
      (lambda ()
        (psc-ide-mode)
-       (company-mode)))
+       (company-mode)
+       (flycheck-mode)))
    #+END_SRC
 
 ** Usage
