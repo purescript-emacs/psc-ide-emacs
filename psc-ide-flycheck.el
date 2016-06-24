@@ -98,12 +98,24 @@
 (define-key purescript-mode-map (kbd "C-c M-s")
   'psc-ide-flycheck-insert-suggestion)
 
+(defun psc-ide-flycheck-copy-related-files (original temp-file)
+  (let ((source-js (concat (file-name-directory original)
+                           (file-name-base original)
+                           ".js"))
+        (target-js (concat (file-name-directory temp-file)
+                           (file-name-base temp-file)
+                           ".js")))
+    (when (file-exists-p source-js)
+      (copy-file source-js target-js t)
+      (push target-js flycheck-temporaries))))
+
 (defun psc-ide-flycheck-start (checker callback)
   "Start a psc-ide syntax check with CHECKER.
 
 CALLBACK is the status callback passed by flycheck."
 
   (let ((temp-file (flycheck-save-buffer-to-temp #'flycheck-temp-file-system)))
+    (psc-ide-flycheck-copy-related-files (buffer-file-name) temp-file)
     (psc-ide-send (psc-ide-command-rebuild temp-file)
                   (lambda (result)
                     (condition-case err
