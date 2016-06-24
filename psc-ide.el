@@ -178,7 +178,9 @@ in a buffer"
   "Start 'psc-ide-server'."
   (interactive (list (read-directory-name "Project root? "
                                           (psc-ide-suggest-project-dir))))
-  (psc-ide-server-start-impl dir-name))
+  (psc-ide-server-start-impl dir-name)
+  ;; After 1 second we send a load all command
+  (run-at-time "1 sec" nil 'psc-ide-load-all))
 
 (defun psc-ide-server-quit ()
   "Quit 'psc-ide-server'."
