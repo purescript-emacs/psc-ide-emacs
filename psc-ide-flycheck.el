@@ -47,15 +47,18 @@
                     (put-text-property 0 1 :endColumn .position.endColumn .errorCode)
                     (when .suggestion
                       (setq .message (concat .message " ●")))
-                    (push (flycheck-error-new-at
-                           .position.startLine
-                           .position.startColumn
-                           resultType
-                           .message
-                           :id .errorCode
-                           :checker checker
-                           :filename .filename)
-                          errors))))
+                    (push
+                     (flycheck-fix-error-filename
+                      (flycheck-error-new-at
+                       .position.startLine
+                       .position.startColumn
+                       resultType
+                       .message
+                       :id .errorCode
+                       :checker checker
+                       :filename .filename)
+                      flycheck-temporaries)
+                     errors))))
               .result)
       errors)))
 
@@ -95,18 +98,33 @@
 (define-key purescript-mode-map (kbd "C-c M-s")
   'psc-ide-flycheck-insert-suggestion)
 
+(defun psc-ide-flycheck-copy-related-files (original temp-file)
+  (let ((source-js (concat (file-name-directory original)
+                           (file-name-base original)
+                           ".js"))
+        (target-js (concat (file-name-directory temp-file)
+                           (file-name-base temp-file)
+                           ".js")))
+    (when (file-exists-p source-js)
+      (copy-file source-js target-js t)
+      (push target-js flycheck-temporaries))))
+
 (defun psc-ide-flycheck-start (checker callback)
   "Start a psc-ide syntax check with CHECKER.
 
 CALLBACK is the status callback passed by flycheck."
-  (psc-ide-send (psc-ide-command-rebuild)
-                (lambda (result)
-                  (condition-case err
-                      (progn
-                        (let ((errors (psc-ide-flycheck-parse-errors result checker)))
-                          (funcall callback 'finished errors)))
-                    (`(error debug)
-                     (funcall callback 'errored (error-message-string err)))))))
+
+  (let ((temp-file (flycheck-save-buffer-to-temp #'flycheck-temp-file-system)))
+    (psc-ide-flycheck-copy-related-files (buffer-file-name) temp-file)
+    (psc-ide-send (psc-ide-command-rebuild temp-file)
+                  (lambda (result)
+                    (condition-case err
+                        (progn
+                          (let ((errors (psc-ide-flycheck-parse-errors result checker)))
+                            (funcall callback 'finished errors)))
+                      (`(error debug)
+                       (flycheck-safe-delete-temporaries)
+                       (funcall callback 'errored (error-message-string err))))))))
 
 (flycheck-define-generic-checker 'psc-ide
   "A purescript syntax checker using the `psc-ide' interface."
