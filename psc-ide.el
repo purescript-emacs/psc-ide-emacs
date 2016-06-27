@@ -208,6 +208,12 @@ in a buffer"
                        "Have you loaded the corresponding module?")
                ident))))
 
+(defun psc-ide-goto-definition ()
+  "Go to definition of the symbol under cursor."
+  (interactive)
+  (let ((ident (psc-ide-ident-at-point)))
+    (psc-ide-goto-definition-impl ident)))
+
 (defun psc-ide-case-split (type)
   "Case Split on identifier under cursor."
   (interactive "sType: ")
@@ -468,6 +474,23 @@ passes it into the callback"
     ;; string, so we need to explicitly return the identifier from here
     identifier))
 
+(defun psc-ide-goto-definition-impl (search)
+  "Asks for the definition location of SEARCH and jumps to it."
+  (let* ((resp (psc-ide-send-sync
+                (psc-ide-build-type-command search)))
+         (result (psc-ide-unwrap-result resp)))
+    (when (not (zerop (length result)))
+      (let* ((completion (aref result 0))
+             (file (cdr (assoc 'file completion)))
+             (line (cdr (assoc 'line completion)))
+             (column (cdr (assoc 'column completion))))
+        (when (and file line column)
+          (xref-push-marker-stack)
+          (find-file (expand-file-name file))
+          (goto-char (point-min))
+          (forward-line (1- line))
+          (forward-char (1- column)))))))
+
 (defun psc-ide-show-type-impl (search)
   "Returns a string that describes the type of SEARCH.
 Returns NIL if the type of SEARCH is not found."
@@ -478,7 +501,7 @@ Returns NIL if the type of SEARCH is not found."
       (let* ((completion (aref result 0))
              (type (cdr (assoc 'type completion)))
              (module (cdr (assoc 'module completion)))
-            (identifier (cdr (assoc 'identifier completion))))
+             (identifier (cdr (assoc 'identifier completion))))
         (s-concat module "." identifier " :: \n  " type)))))
 
 (defun psc-ide-build-type-command (search)
