@@ -427,18 +427,24 @@ The cases we have to cover:
       (if manual
           ;; 2. fil| + manual <- don't filter at all
           (psc-ide-command-complete
-           (vector (psc-ide-filter-prefix prefix)))
+           (vector (psc-ide-filter-prefix prefix))
+           nil
+           (psc-ide-get-module-name))
         ;; 3. fil| <- filter by prefix and imported modules"
         (psc-ide-command-complete
          (vector (psc-ide-filter-prefix prefix)
-                 (psc-ide-filter-modules (psc-ide-all-imported-modules))))))))
+                 (psc-ide-filter-modules (psc-ide-all-imported-modules)))
+         nil
+         (psc-ide-get-module-name))))))
 
 (defun psc-ide-qualified-completion-command (prefix alias)
   "Builds a completion command for a PREFIX with ALIAS"
   (let ((modules (psc-ide-modules-for-alias alias)))
     (psc-ide-command-complete
      (vector (psc-ide-filter-prefix prefix)
-             (psc-ide-filter-modules (vconcat modules))))))
+             (psc-ide-filter-modules (vconcat modules)))
+     nil
+     (psc-ide-get-module-name))))
 
 (defun psc-ide-all-imported-modules ()
   "Retrieves all imported modules for a buffer"
@@ -516,13 +522,17 @@ Returns NIL if the type of SEARCH is not found."
       (psc-ide-qualified-type-command ident alias)
     (psc-ide-command-show-type
      (vector (psc-ide-filter-modules
-              (psc-ide-all-imported-modules))) ident))))
+              (psc-ide-all-imported-modules)))
+     ident
+     (psc-ide-get-module-name)))))
 
 (defun psc-ide-qualified-type-command (ident alias)
-  "Builds a type command for a IDENT with ALIAS"
+  "Builds a type command for an IDENT with ALIAS"
   (let ((modules (psc-ide-modules-for-alias alias)))
         (psc-ide-command-show-type
-         (vector (psc-ide-filter-modules (vconcat modules))) ident)))
+         (vector (psc-ide-filter-modules (vconcat modules)))
+         ident
+         (psc-ide-get-module-name))))
 
 (defun psc-ide-annotation (s)
   (format " (%s)" (get-text-property 0 :module s)))
