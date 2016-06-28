@@ -41,12 +41,11 @@
       (seq-do (lambda (err)
                 (let-alist err
                   (unless (member .errorCode psc-ide-flycheck-ignored-error-codes)
-                    ;; HACK: for insert suggestions
                     (put-text-property 0 1 :suggestion .suggestion .errorCode)
+                    (put-text-property 0 1 :startLine .position.startLine .errorCode)
+                    (put-text-property 0 1 :startColumn .position.startColumn .errorCode)
                     (put-text-property 0 1 :endLine .position.endLine .errorCode)
                     (put-text-property 0 1 :endColumn .position.endColumn .errorCode)
-                    (when .suggestion
-                      (setq .message (concat .message " ●")))
                     (push
                      (flycheck-fix-error-filename
                       (flycheck-error-new-at
@@ -67,13 +66,15 @@
   "Replace error with suggestion from psc compiler."
   (interactive)
   (-if-let* ((flycheck-err (car (flycheck-overlay-errors-at (point))))
-             (suggestion   (get-text-property 0 :suggestion (flycheck-error-id flycheck-err)))
-             (endLine      (get-text-property 0 :endLine    (flycheck-error-id flycheck-err)))
-             (endColumn    (get-text-property 0 :endColumn  (flycheck-error-id flycheck-err))))
+             (suggestion (get-text-property 0 :suggestion (flycheck-error-id flycheck-err)))
+             (startLine (get-text-property 0 :startLine (flycheck-error-id flycheck-err)))
+             (startColumn (get-text-property 0 :startColumn (flycheck-error-id flycheck-err))))
+             (endLine (get-text-property 0 :endLine (flycheck-error-id flycheck-err)))
+             (endColumn (get-text-property 0 :endColumn (flycheck-error-id flycheck-err))))
       (let* ((start (save-excursion
                       (goto-char (point-min))
-                      (forward-line (- (flycheck-error-line flycheck-err) 1))
-                      (move-to-column (- (flycheck-error-column flycheck-err) 1))
+                      (forward-line (- startLine 1))
+                      (move-to-column (- startColumn 1))
                       (point)))
              (end (save-excursion
                     (goto-char (point-min))
