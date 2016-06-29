@@ -31,6 +31,7 @@
   :tag "Flycheck PscIde Ignored Error Codes"
   :type '(repeat string))
 
+
 (defun psc-ide-flycheck-parse-errors (data checker)
   "Decode purescript json output errors from DATA with CHECKER."
   (let-alist data
@@ -41,23 +42,28 @@
       (seq-do (lambda (err)
                 (let-alist err
                   (unless (member .errorCode psc-ide-flycheck-ignored-error-codes)
-                    (put-text-property 0 1 :suggestion .suggestion .errorCode)
-                    (put-text-property 0 1 :startLine .position.startLine .errorCode)
-                    (put-text-property 0 1 :startColumn .position.startColumn .errorCode)
-                    (put-text-property 0 1 :endLine .position.endLine .errorCode)
-                    (put-text-property 0 1 :endColumn .position.endColumn .errorCode)
-                    (push
-                     (flycheck-fix-error-filename
-                      (flycheck-error-new-at
-                       .position.startLine
-                       .position.startColumn
-                       resultType
-                       .message
-                       :id .errorCode
-                       :checker checker
-                       :filename .filename)
-                      flycheck-temporaries)
-                     errors))))
+                    (let ((replacePos (if .suggestion.replaceRange
+                                          .suggestion.replaceRange
+                                        .position)))
+
+                      (put-text-property 0 1 :suggestion .suggestion .errorCode)
+                      (put-text-property 0 1 :startLine (cdr (assoc 'startLine replacePos)) .errorCode)
+                      (put-text-property 0 1 :startColumn (cdr (assoc 'startColumn replacePos)) .errorCode)
+                      (put-text-property 0 1 :endLine (cdr (assoc 'endLine replacePos)) .errorCode)
+                      (put-text-property 0 1 :endColumn (cdr (assoc 'endColumn replacePos)) .errorCode)
+
+                      (push
+                       (flycheck-fix-error-filename
+                        (flycheck-error-new-at
+                         .position.startLine
+                         .position.startColumn
+                         resultType
+                         .message
+                         :id .errorCode
+                         :checker checker
+                         :filename .filename)
+                        flycheck-temporaries)
+                       errors)))))
               .result)
       errors)))
 
@@ -68,7 +74,7 @@
   (-if-let* ((flycheck-err (car (flycheck-overlay-errors-at (point))))
              (suggestion (get-text-property 0 :suggestion (flycheck-error-id flycheck-err)))
              (startLine (get-text-property 0 :startLine (flycheck-error-id flycheck-err)))
-             (startColumn (get-text-property 0 :startColumn (flycheck-error-id flycheck-err))))
+             (startColumn (get-text-property 0 :startColumn (flycheck-error-id flycheck-err)))
              (endLine (get-text-property 0 :endLine (flycheck-error-id flycheck-err)))
              (endColumn (get-text-property 0 :endColumn (flycheck-error-id flycheck-err))))
       (let* ((start (save-excursion
