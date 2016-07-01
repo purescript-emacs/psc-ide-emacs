@@ -93,7 +93,7 @@
           (let ((new-end
                  (save-excursion
                    (let-alist suggestion
-                     (insert .replacement))
+                     (insert (replace-regexp-in-string "\n\\'" "" .replacement)))
                    (point))))
             (set-mark start)
             (goto-char new-end)
