@@ -102,7 +102,7 @@ in a buffer"
   :type  'boolean)
 
 (defconst psc-ide-import-regex
-  (rx (and line-start "import" (1+ space) (opt (and "qualified" (1+ space)))
+  (rx (and line-start "import" (1+ space)
            (group (and (1+ (any word "."))))
            (opt (1+ space) "hiding")
            (opt (1+ space) "(" (group (0+ not-newline)) ")")
