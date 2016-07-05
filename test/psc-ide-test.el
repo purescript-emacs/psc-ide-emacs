@@ -3,16 +3,16 @@
 (defconst psc-ide-test-example-imports "
 module Main where
 
-import Prelude
+import Prelude hiding (compose)
 
 import Control.Monad.Aff (Aff(), runAff, later')
 import Control.Monad.Eff (Eff())
 import Control.Monad.Eff.Exception (throwException)
-import Halogen
+import Halogen hiding (get, set) as H
 
 import Halogen.Util (appendToBody, onLoad)
 import 		Halogen.HTML.Indexed 		as 	Hd
-import Halogen.HTML.Properties.Indexed as P
+import Halogen.HTML.Properties.Indexed (key, href) as P
 import Halogen.HTML.Events.Indexed as P
 
 ")
