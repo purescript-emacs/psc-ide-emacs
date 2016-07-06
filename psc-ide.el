@@ -102,10 +102,11 @@ in a buffer"
   :type  'boolean)
 
 (defconst psc-ide-import-regex
-  (rx (and line-start "import" (1+ space) (opt (and "qualified" (1+ space)))
+  (rx (and line-start "import" (1+ space)
            (group (and (1+ (any word "."))))
-           (opt (1+ space) "as" (1+ space) (group (and (1+ word))))
-           (opt (1+ space) "(" (group (0+ not-newline)) ")"))))
+           (opt (1+ space) "hiding")
+           (opt (1+ space) "(" (group (0+ not-newline)) ")")
+           (opt (1+ space) "as" (1+ space) (group (and (1+ word)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -320,7 +321,7 @@ use when the search used was with `string-match'."
          (idx 3)
          result)
     (push `(module . ,(match-string-no-properties 1 string)) result)
-    (push `(alias . ,(match-string-no-properties 2 string)) result)
+    (push `(alias . ,(match-string-no-properties 3 string)) result)
     result))
 
 (defun psc-ide-parse-imports-in-buffer (&optional buffer)

@@ -3,34 +3,38 @@
 (defconst psc-ide-test-example-imports "
 module Main where
 
-import Prelude
+import Prelude hiding (compose)
 
 import Control.Monad.Aff (Aff(), runAff, later')
 import Control.Monad.Eff (Eff())
 import Control.Monad.Eff.Exception (throwException)
-import Halogen
+import Halogen hiding (get, set) as H
 
 import Halogen.Util (appendToBody, onLoad)
-import 		qualified Halogen.HTML.Indexed 		as 	Hd
-import qualified Halogen.HTML.Properties.Indexed as P
+import 		Halogen.HTML.Indexed 		as 	Hd
+import Halogen.HTML.Properties.Indexed (key, href) as P
 import Halogen.HTML.Events.Indexed as P
 
 ")
 
-(defun psc-ide-test-parse-example-imports ()
+(defun psc-ide-test-example-with-buffer (f)
   (with-temp-buffer
     (insert psc-ide-test-example-imports)
     (goto-char 0)
-    (psc-ide-parse-imports-in-buffer)))
+    (funcall f)))
+
+(defun psc-ide-test-parse-example-imports ()
+  (psc-ide-test-example-with-buffer
+    (lambda () (psc-ide-parse-imports-in-buffer))))
 
 (ert-deftest psc-ide-show-type-impl-test ()
   (with-mock
-   (mock (psc-ide-send *) => "{\"result\":[{\"type\":\"Show-Type\",\"module\":\"Module\"}],\"resultType\":\"success\"}\n")
-   (should (string= "Show-Type"
+   (mock (psc-ide-send-sync *) => (json-read-from-string "{\"result\":[{\"type\":\"Show-Type\",\"module\":\"Module\",\"identifier\":\"something\"}],\"resultType\":\"success\"}\n"))
+   (should (string= "Module.something :: \n  Show-Type"
                     (psc-ide-show-type-impl "something"))))
 
   (with-mock
-   (mock (psc-ide-send *) => "{\"result\":[],\"resultType\":\"success\"}\n")
+   (mock (psc-ide-send-sync *) => (json-read-from-string "{\"result\":[],\"resultType\":\"success\"}\n"))
    (should (not (psc-ide-show-type-impl "something")))))
 
 
@@ -41,63 +45,64 @@ import Halogen.HTML.Events.Indexed as P
     (insert psc-ide-test-example-imports)
     (goto-char 0)
     (let ((matches (psc-ide-parse-imports-in-buffer)))
-      (should (= 9 (length matches))))))
+      (should (= 10 (length matches))))))
 
-(defun test-import (import name as exposing)
+(defun test-import (import name as)
     (string-match psc-ide-import-regex import)
     (let* ((import (psc-ide-extract-import-from-match-data import)))
       (should (equal (assoc 'module import) (cons 'module name)))
-      (should (equal (assoc 'alias import) (cons 'alias as)))
-      (should (equal (assoc 'exposing import) (cons 'exposing exposing)))))
+      (should (equal (assoc 'alias import) (cons 'alias as)))))
 
 (ert-deftest test-get-import-from-match-data-full ()
-  (test-import "import qualified Mod.SubMod as El (foo, bar)"
+  (test-import "import Mod.SubMod (foo, bar) as El"
                "Mod.SubMod"
-               "El"
-               '("foo" "bar")))
+               "El"))
 
 (ert-deftest test-match-import-single-module ()
-  (test-import "import Foo" "Foo" nil ()))
+  (test-import "import Foo" "Foo" nil))
 
 (ert-deftest test-match-import-with-alias ()
-  (test-import "import qualified Foo as F" "Foo" "F" nil))
+  (test-import "import Foo as F" "Foo" "F"))
 
 (ert-deftest test-match-import-with-single-expose ()
-  (test-import "import Foo (test)" "Foo" nil '("test")))
+  (test-import "import Foo (test)" "Foo" nil))
 
 (ert-deftest test-match-import-with-multiple-exposings-tight ()
-  (test-import "import Foo (test1,test2)" "Foo" nil '("test1" "test2")))
+  (test-import "import Foo (test1,test2)" "Foo" nil))
 
 (ert-deftest test-match-import-with-multiple-exposings-loose ()
-  (test-import "import Foo ( test1 , test2 )" "Foo" nil '("test1" "test2")))
+  (test-import "import Foo ( test1 , test2 )" "Foo" nil))
 
 (ert-deftest test-match-import-with-alias+multiple-exposings-tight ()
-  (test-import "import qualified Foo as F (test1,test2)" "Foo" "F" '("test1" "test2")))
+  (test-import "import Foo (test1,test2) as F" "Foo" "F"))
 
 (ert-deftest test-match-import-with-alias+multiple-exposings-loose ()
   (test-import
-   "import qualified Foo as F ( test1 , test2 )"
+   "import Foo ( test1 , test2 ) as F"
    "Foo"
-   "F"
-   '("test1" "test2")))
+   "F"))
 
+(ert-deftest test-all-imported-modules ()
+  (let ((imports (psc-ide-test-example-with-buffer
+                   (lambda () (psc-ide-all-imported-modules)))))
+    (should (equal (length imports) 10))))
 
-(ert-deftest test-filter-bare-imports ()
-  (let ((imports (psc-ide-test-parse-example-imports)))
-    (should (equal
-             (length (psc-ide-filter-bare-imports imports))
-             2))))
-
-(ert-deftest test-filter-imports-by-alias ()
-  (let ((imports (psc-ide-test-parse-example-imports)))
-    (should (equal
-             (length (psc-ide-filter-imports-by-alias imports "P"))
-             2))))
+(ert-deftest test-moduels-for-alias ()
+  (let ((imports (psc-ide-test-example-with-buffer
+                   (lambda () (psc-ide-modules-for-alias "P")))))
+    (should (equal (length imports) 2))))
 
 (ert-deftest test-get-completion-settings ()
-  (let ((imports (psc-ide-test-parse-example-imports)))
-    (let* ((result (psc-ide-get-completion-settings "P.a" imports))
-           (search (car result))
-           (modules (cdr result)))
-      (should (equal '("a" . "P") search))
-      (should (equal 2 (length modules))))))
+  (psc-ide-test-example-with-buffer
+    (lambda ()
+      (let* ((command (json-read-from-string (psc-ide-build-completion-command "P.a" nil)))
+             (params (cdr (assoc 'params command)))
+             (filters (append (cdr (assoc 'filters params)) nil))
+             (search (-some (lambda (filter)
+                               (when (equal "prefix" (cdr (assoc 'filter filter)))
+                                 (cdr (assoc 'search (cdr (assoc 'params filter)))))) filters))
+             (modules (-some (lambda (filter)
+                               (when (equal "modules" (cdr (assoc 'filter filter)))
+                                 (cdr (assoc 'modules (cdr (assoc 'params filter)))))) filters)))
+        (should (equal search "a"))
+        (should (equal (length modules) 2))))))
