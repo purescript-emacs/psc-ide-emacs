@@ -74,6 +74,11 @@
   :group 'psc-ide
   :type  'integer)
 
+(defcustom psc-ide-source-globs '("src/**/*.purs" "bower_components/purescript-*/src/**/*.purs")
+  "The source globs for your PureScript source files."
+  :group 'psc-ide
+  :type  'sexp)
+
 (defcustom psc-ide-debug nil
   "Whether psc-ide-server should be started with the debug flag"
   :group 'psc-ide
@@ -367,7 +372,7 @@ use when the search used was with `string-match'."
         (directory (expand-file-name dir-name))
         (debug-flag (when psc-ide-debug "--debug")))
     (if path
-        (remove nil `(,path "-p" ,port "-d" ,directory ,debug-flag))
+        (remove nil `(,path "-p" ,port "-d" ,directory ,debug-flag ,@psc-ide-source-globs))
       (error (s-join " " '("Couldn't locate the psc-ide-server executable. You"
                            "could either customize the psc-ide-server-executable"
                            "setting, or put the executable on your path."))))))
@@ -493,7 +498,6 @@ passes it into the callback"
                    (start (cdr (assoc 'start position)))
                    (line (aref start 0))
                    (column (aref start 1)))
-              (xref-push-marker-stack)
               (find-file (expand-file-name file))
               (goto-char (point-min))
               (forward-line (1- line))
