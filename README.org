@@ -49,6 +49,17 @@
 *** Show type for identifier under cursor ~C-c C-t~
     [[http://i.imgur.com/A8cXe9t.gif]]
 
+*** Go to definition =M-.=
+    You can use M-, to jump back to where you came from . If your sourcefiles
+    are not captured by the default globs you can add a ~.dir-locals.el~ file to
+    the root of your project, like so:
+
+    #+BEGIN_SRC elisp
+      ((purescript-mode
+        . ((psc-ide-source-globs
+            . ("src/**/*.purs" "bower_components/purescript-*/src/**/*.purs")))))
+    #+END_SRC
+    (Modify the globs accordingly)
 *** Add a clause for the function definition under cursor ~C-c C-a~
     [[http://i.imgur.com/VNeC3z8.gif]]
 
