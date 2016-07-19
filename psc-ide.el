@@ -48,6 +48,8 @@
             (define-key map (kbd "C-c C-i") 'psc-ide-add-import)
             (define-key map (kbd "C-c C-t") 'psc-ide-show-type)
             (define-key map (kbd "C-c C-b") 'psc-ide-rebuild)
+            (define-key map (kbd "M-.") 'psc-ide-goto-definition)
+            (define-key map (kbd "M-,") 'pop-tag-mark)
             map))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -498,6 +500,8 @@ passes it into the callback"
                    (start (cdr (assoc 'start position)))
                    (line (aref start 0))
                    (column (aref start 1)))
+              (require 'etags)
+              (ring-insert find-tag-marker-ring (point-marker))
               (find-file (expand-file-name file))
               (goto-char (point-min))
               (forward-line (1- line))
