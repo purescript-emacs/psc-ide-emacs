@@ -372,12 +372,25 @@ use when the search used was with `string-match'."
   (let ((path (executable-find psc-ide-server-executable))
         (port (number-to-string psc-ide-port))
         (directory (expand-file-name dir-name))
-        (debug-flag (when psc-ide-debug "--debug")))
+        (debug-flag (when psc-ide-debug "--debug"))
+        (globs (when (psc-ide--version-gte (psc-ide-server-version) "0.9.2") psc-ide-source-globs)))
     (if path
-        (remove nil `(,path "-p" ,port "-d" ,directory ,debug-flag ,@psc-ide-source-globs))
+        (remove nil `(,path "-p" ,port "-d" ,directory ,debug-flag ,@globs))
       (error (s-join " " '("Couldn't locate the psc-ide-server executable. You"
                            "could either customize the psc-ide-server-executable"
                            "setting, or put the executable on your path."))))))
+
+(defun psc-ide-server-version ()
+  "Returns the version of the found psc-ide-server executable"
+  (let ((path (executable-find psc-ide-server-executable)))
+    (s-chomp (shell-command-to-string (s-concat path " --version")))))
+
+(defun psc-ide--version-gte (version1 version2)
+  "Determines whether VERSION1 is greater then or equal to VERSION2"
+  (let ((vs (-zip-fill 0
+                       (-map 'string-to-int (s-split "\\." version1))
+                       (-map 'string-to-int (s-split "\\." version2)))))
+    (not (--drop-while (<= (cdr it) (car it)) vs))))
 
 (defun psc-ide-load-module-impl (module-name)
   "Load a PureScript module and its dependencies."
@@ -500,8 +513,11 @@ passes it into the callback"
                    (start (cdr (assoc 'start position)))
                    (line (aref start 0))
                    (column (aref start 1)))
-              (require 'etags)
-              (ring-insert find-tag-marker-ring (point-marker))
+              (if (fboundp 'xref-push-marker-stack) ;; Emacs 25
+                  (xref-push-marker-stack)
+                (with-no-warnings
+                  (require 'etags)
+                  (ring-insert find-tag-marker-ring (point-marker))))
               (find-file (expand-file-name file))
               (goto-char (point-min))
               (forward-line (1- line))
