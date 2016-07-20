@@ -390,8 +390,7 @@ use when the search used was with `string-match'."
   (let ((vs (-zip-fill 0
                        (-map 'string-to-int (s-split "\\." version1))
                        (-map 'string-to-int (s-split "\\." version2)))))
-    (not  (-drop-while (lambda (x)
-                         (<= (cdr x) (car x))) vs))))
+    (not (--drop-while (<= (cdr it) (car it)) vs))))
 
 (defun psc-ide-load-module-impl (module-name)
   "Load a PureScript module and its dependencies."
