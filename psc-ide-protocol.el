@@ -73,12 +73,13 @@ Evaluates the CALLBACK in the context of the CURRENT buffer that initiated call 
                   :modules modules
                   :dependencies deps ))))
 
-(defun psc-ide-command-show-type (filters search)
+(defun psc-ide-command-show-type (filters search &optional module)
   (json-encode
    (list :command "type"
-         :params (list
-                  :filters filters
-                  :search search ))))
+         :params (-filter #'identity
+                          `(,@(when filters (list :filters filters))
+                            ,@(when search (list :search search))
+                            ,@(when module (list :currentModule module)))))))
 
 (defun psc-ide-command-complete (filters &optional matcher module)
   (json-encode

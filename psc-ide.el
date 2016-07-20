@@ -48,6 +48,8 @@
             (define-key map (kbd "C-c C-i") 'psc-ide-add-import)
             (define-key map (kbd "C-c C-t") 'psc-ide-show-type)
             (define-key map (kbd "C-c C-b") 'psc-ide-rebuild)
+            (define-key map (kbd "M-.") 'psc-ide-goto-definition)
+            (define-key map (kbd "M-,") 'pop-tag-mark)
             map))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -73,6 +75,11 @@
   "The port that psc-ide-server and the client use."
   :group 'psc-ide
   :type  'integer)
+
+(defcustom psc-ide-source-globs '("src/**/*.purs" "bower_components/purescript-*/src/**/*.purs")
+  "The source globs for your PureScript source files."
+  :group 'psc-ide
+  :type  'sexp)
 
 (defcustom psc-ide-debug nil
   "Whether psc-ide-server should be started with the debug flag"
@@ -207,6 +214,12 @@ in a buffer"
       (message (concat "Know nothing about type of `%s'. "
                        "Have you loaded the corresponding module?")
                ident))))
+
+(defun psc-ide-goto-definition ()
+  "Go to definition of the symbol under cursor."
+  (interactive)
+  (let ((ident (psc-ide-ident-at-point)))
+    (psc-ide-goto-definition-impl ident)))
 
 (defun psc-ide-case-split (type)
   "Case Split on identifier under cursor."
@@ -361,7 +374,7 @@ use when the search used was with `string-match'."
         (directory (expand-file-name dir-name))
         (debug-flag (when psc-ide-debug "--debug")))
     (if path
-        (remove nil `(,path "-p" ,port "-d" ,directory ,debug-flag))
+        (remove nil `(,path "-p" ,port "-d" ,directory ,debug-flag ,@psc-ide-source-globs))
       (error (s-join " " '("Couldn't locate the psc-ide-server executable. You"
                            "could either customize the psc-ide-server-executable"
                            "setting, or put the executable on your path."))))))
@@ -421,18 +434,24 @@ The cases we have to cover:
       (if manual
           ;; 2. fil| + manual <- don't filter at all
           (psc-ide-command-complete
-           (vector (psc-ide-filter-prefix prefix)))
+           (vector (psc-ide-filter-prefix prefix))
+           nil
+           (psc-ide-get-module-name))
         ;; 3. fil| <- filter by prefix and imported modules"
         (psc-ide-command-complete
          (vector (psc-ide-filter-prefix prefix)
-                 (psc-ide-filter-modules (psc-ide-all-imported-modules))))))))
+                 (psc-ide-filter-modules (psc-ide-all-imported-modules)))
+         nil
+         (psc-ide-get-module-name))))))
 
 (defun psc-ide-qualified-completion-command (prefix alias)
   "Builds a completion command for a PREFIX with ALIAS"
   (let ((modules (psc-ide-modules-for-alias alias)))
     (psc-ide-command-complete
      (vector (psc-ide-filter-prefix prefix)
-             (psc-ide-filter-modules (vconcat modules))))))
+             (psc-ide-filter-modules (vconcat modules)))
+     nil
+     (psc-ide-get-module-name))))
 
 (defun psc-ide-all-imported-modules ()
   "Retrieves all imported modules for a buffer"
@@ -468,6 +487,27 @@ passes it into the callback"
     ;; string, so we need to explicitly return the identifier from here
     identifier))
 
+(defun psc-ide-goto-definition-impl (search)
+  "Asks for the definition location of SEARCH and jumps to it."
+  (let* ((resp (psc-ide-send-sync
+                (psc-ide-build-type-command search)))
+         (result (psc-ide-unwrap-result resp)))
+    (when (not (zerop (length result)))
+      (let* ((completion (aref result 0))
+             (position (cdr (assoc 'definedAt completion))))
+        (if position
+            (let* ((file (cdr (assoc 'name position)))
+                   (start (cdr (assoc 'start position)))
+                   (line (aref start 0))
+                   (column (aref start 1)))
+              (require 'etags)
+              (ring-insert find-tag-marker-ring (point-marker))
+              (find-file (expand-file-name file))
+              (goto-char (point-min))
+              (forward-line (1- line))
+              (forward-char (1- column)))
+          (message (format "No position information for %s" search)))))))
+
 (defun psc-ide-show-type-impl (search)
   "Returns a string that describes the type of SEARCH.
 Returns NIL if the type of SEARCH is not found."
@@ -478,7 +518,7 @@ Returns NIL if the type of SEARCH is not found."
       (let* ((completion (aref result 0))
              (type (cdr (assoc 'type completion)))
              (module (cdr (assoc 'module completion)))
-            (identifier (cdr (assoc 'identifier completion))))
+             (identifier (cdr (assoc 'identifier completion))))
         (s-concat module "." identifier " :: \n  " type)))))
 
 (defun psc-ide-build-type-command (search)
@@ -490,13 +530,17 @@ Returns NIL if the type of SEARCH is not found."
       (psc-ide-qualified-type-command ident alias)
     (psc-ide-command-show-type
      (vector (psc-ide-filter-modules
-              (psc-ide-all-imported-modules))) ident))))
+              (psc-ide-all-imported-modules)))
+     ident
+     (psc-ide-get-module-name)))))
 
 (defun psc-ide-qualified-type-command (ident alias)
-  "Builds a type command for a IDENT with ALIAS"
+  "Builds a type command for an IDENT with ALIAS"
   (let ((modules (psc-ide-modules-for-alias alias)))
         (psc-ide-command-show-type
-         (vector (psc-ide-filter-modules (vconcat modules))) ident)))
+         (vector (psc-ide-filter-modules (vconcat modules)))
+         ident
+         (psc-ide-get-module-name))))
 
 (defun psc-ide-annotation (s)
   (format " (%s)" (get-text-property 0 :module s)))
