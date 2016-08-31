@@ -257,7 +257,8 @@ none."
     (if (<= (length result) 0)
         ;; If there are no warnings we close the rebuild buffer and print "OK"
         (progn
-          (kill-buffer "*psc-ide-rebuild*")
+          (if (not (eq nil (get-buffer "*psc-ide-rebuild*")))
+              (kill-buffer "*psc-ide-rebuild*"))
           (message "OK"))
       (psc-ide-display-rebuild-messages "Warning" result))))
 
