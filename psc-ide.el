@@ -253,19 +253,18 @@ none."
   (let ((is-success (string= "success" (cdr (assoc 'resultType response))))
         (result (cdr (assoc 'result response))))
     (if (not is-success)
-        (psc-ide-display-rebuild-messages "Error" result))
+        (psc-ide-display-rebuild-message "Error" (first-error (aref result 0))))
     (if (<= (length result) 0)
         ;; If there are no warnings we close the rebuild buffer and print "OK"
         (progn
-          (if (not (eq nil (get-buffer "*psc-ide-rebuild*")))
-              (kill-buffer "*psc-ide-rebuild*"))
+          (delete-windows-on (get-buffer-create "*psc-ide-rebuild*"))
           (message "OK"))
-      (psc-ide-display-rebuild-messages "Warning" result))))
+      (psc-ide-display-rebuild-message "Warning" (first-warning (aref result 0))))))
 
-(defun psc-ide-display-rebuild-messages (type msgs)
+(defun psc-ide-display-rebuild-message (type rawMsg)
   "Takes a parsed JSON error/warning and displays it in the
 rebuild buffer."
-  (let ((msg (mapconcat (lambda (m) (concat type ": " (psc-ide-pretty-json-error m))) msgs "\n\n")))
+  (let ((msg (concat type ": " (psc-ide-pretty-json-error rawMsg))))
     (progn 
       (with-current-buffer (get-buffer-create "*psc-ide-rebuild*")
         (compilation-mode)
