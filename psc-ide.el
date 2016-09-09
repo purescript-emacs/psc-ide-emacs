@@ -253,13 +253,13 @@ none."
   (let ((is-success (string= "success" (cdr (assoc 'resultType response))))
         (result (cdr (assoc 'result response))))
     (if (not is-success)
-        (psc-ide-display-rebuild-message "Error" (first-error (aref result 0))))
-    (if (<= (length result) 0)
-        ;; If there are no warnings we close the rebuild buffer and print "OK"
-        (progn
-          (delete-windows-on (get-buffer-create "*psc-ide-rebuild*"))
-          (message "OK"))
-      (psc-ide-display-rebuild-message "Warning" (first-warning (aref result 0))))))
+        (psc-ide-display-rebuild-message "Error" (aref result 0))
+      (if (<= (length result) 0)
+          ;; If there are no warnings we close the rebuild buffer and print "OK"
+          (progn
+            (delete-windows-on (get-buffer-create "*psc-ide-rebuild*"))
+            (message "OK"))
+        (psc-ide-display-rebuild-message "Warning" (aref result 0))))))
 
 (defun psc-ide-display-rebuild-message (type rawMsg)
   "Takes a parsed JSON error/warning and displays it in the
