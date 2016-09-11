@@ -243,6 +243,7 @@ in a buffer"
 (defun psc-ide-rebuild ()
   "Rebuild the current module"
   (interactive)
+  (save-buffer)
   (psc-ide-send (psc-ide-command-rebuild) 'psc-ide-rebuild-handler))
 
 (defun psc-ide-rebuild-handler (response)
@@ -252,31 +253,27 @@ none."
   (let ((is-success (string= "success" (cdr (assoc 'resultType response))))
         (result (cdr (assoc 'result response))))
     (if (not is-success)
-        ;; Display the first reported error
-        (let* ((first-error (aref result 0)))
-          (psc-ide-display-rebuild-error
-           (psc-ide-pretty-json-error first-error))))
-    (if (<= (length result) 0)
-        ;; If there are no warnings we close the rebuild buffer and print "OK"
-        (progn
-          (delete-windows-on (get-buffer-create "*psc-ide-rebuild*"))
-          (message "OK"))
-      (let ((first-warning (aref result 0)))
-        ;; Display the first reported warning
-        (psc-ide-display-rebuild-error
-         (psc-ide-pretty-json-error first-warning))))))
+        (psc-ide-display-rebuild-message "Error" (aref result 0))
+      (if (<= (length result) 0)
+          ;; If there are no warnings we close the rebuild buffer and print "OK"
+          (progn
+            (delete-windows-on (get-buffer-create "*psc-ide-rebuild*"))
+            (message "OK"))
+        (psc-ide-display-rebuild-message "Warning" (aref result 0))))))
 
-(defun psc-ide-display-rebuild-error (err)
+(defun psc-ide-display-rebuild-message (type rawMsg)
   "Takes a parsed JSON error/warning and displays it in the
 rebuild buffer."
-  (with-current-buffer (get-buffer-create "*psc-ide-rebuild*")
-    (compilation-mode)
-    (read-only-mode -1)
-    (erase-buffer)
-    (insert err)
-    (read-only-mode 1))
-  (display-buffer "*psc-ide-rebuild*")
-  (set-window-point (get-buffer-window "*psc-ide-rebuild*") (point-min)))
+  (let ((msg (concat type ": " (psc-ide-pretty-json-error rawMsg))))
+    (progn 
+      (with-current-buffer (get-buffer-create "*psc-ide-rebuild*")
+        (compilation-mode)
+        (read-only-mode -1)
+        (erase-buffer)
+        (insert msg)
+        (read-only-mode 1))
+      (display-buffer "*psc-ide-rebuild*")
+      (set-window-point (get-buffer-window "*psc-ide-rebuild*") (point-min)))))
 
 (defun psc-ide-pretty-json-error (err)
   "Formats a parsed JSON error/warning into a format that can be
