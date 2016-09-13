@@ -205,11 +205,11 @@ in a buffer"
   (interactive)
   (psc-ide-send psc-ide-command-load-all (-const "yay")))
 
-(defun psc-ide-show-type ()
+(defun psc-ide-show-type (expand)
   "Show type of the symbol under cursor."
-  (interactive)
+  (interactive "P")
   (let ((ident (psc-ide-ident-at-point)))
-    (-if-let (type-description (psc-ide-show-type-impl ident))
+    (-if-let (type-description (psc-ide-show-type-impl ident expand))
         (message "%s" (psc-ide-string-fontified type-description))
       (message (concat "Know nothing about type of `%s'. "
                        "Have you loaded the corresponding module?")
@@ -521,7 +521,7 @@ passes it into the callback"
               (forward-char (1- column)))
           (message (format "No position information for %s" search)))))))
 
-(defun psc-ide-show-type-impl (search)
+(defun psc-ide-show-type-impl (search &optional expand)
   "Returns a string that describes the type of SEARCH.
 Returns NIL if the type of SEARCH is not found."
   (let* ((resp (psc-ide-send-sync
@@ -529,7 +529,7 @@ Returns NIL if the type of SEARCH is not found."
          (result (psc-ide-unwrap-result resp)))
     (when (not (zerop (length result)))
       (let* ((completion (aref result 0))
-             (type (cdr (assoc 'type completion)))
+             (type (cdr (assoc (if expand 'expandedType 'type) completion)))
              (module (cdr (assoc 'module completion)))
              (identifier (cdr (assoc 'identifier completion))))
         (s-concat module "." identifier " :: \n  " type)))))
