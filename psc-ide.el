@@ -135,7 +135,7 @@ in a buffer"
 
 (defun psc-ide-init ()
   (interactive)
-
+  (setq-local eldoc-documentation-function 'psc-ide-show-type-eldoc)
   (set (make-local-variable 'psc-ide-buffer-import-list)
        (psc-ide-parse-imports-in-buffer)))
 
@@ -293,6 +293,12 @@ nicely displayed inside a compilation buffer."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Non-interactive.
+
+(defun psc-ide-show-type-eldoc ()
+  "Show type of the symbol under cursor, but be quiet about failures"
+  (let ((ident (psc-ide-ident-at-point)))
+    (-when-let (type-description (psc-ide-show-type-impl ident))
+      (message "%s" (psc-ide-string-fontified type-description)))))
 
 (defun psc-ide-case-split-impl (type)
   "Case Split on identifier under cursor"
