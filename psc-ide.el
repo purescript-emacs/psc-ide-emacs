@@ -392,8 +392,13 @@ use when the search used was with `string-match'."
   "Determines whether VERSION1 is greater then or equal to VERSION2"
   (let ((vs (-zip-fill 0
                        (-map 'string-to-int (s-split "\\." version1))
-                       (-map 'string-to-int (s-split "\\." version2)))))
-    (not (--drop-while (<= (cdr it) (car it)) vs))))
+                       (-map 'string-to-int (s-split "\\." version2))))
+        (comp nil))
+    (dolist (p vs comp)
+      (when (null comp)
+        (setq comp (cond ((< (car p) (cdr p)) 'lt)
+                         ((> (car p) (cdr p)) 'gt)))))
+    (not (equal 'lt comp))))
 
 (defun psc-ide-load-module-impl (module-name)
   "Load a PureScript module and its dependencies."
