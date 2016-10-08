@@ -390,10 +390,15 @@ use when the search used was with `string-match'."
 
 (defun psc-ide--version-gte (version1 version2)
   "Determines whether VERSION1 is greater then or equal to VERSION2"
-  (let ((vs (-zip-fill 0
-                       (-map 'string-to-int (s-split "\\." version1))
-                       (-map 'string-to-int (s-split "\\." version2)))))
-    (not (--drop-while (<= (cdr it) (car it)) vs))))
+  (let* ((vs (-zip-fill 0
+                        (-map 'string-to-int (s-split "\\." version1))
+                        (-map 'string-to-int (s-split "\\." version2))))
+         ;; drop all the prefix version numbers that are equal
+         (v (car (--drop-while (= (cdr it) (car it)) vs))))
+    ;; if v is nil, the two versions were completely equal
+    (if v
+        (>= (car compared) (cdr compared))
+      t)))
 
 (defun psc-ide-load-module-impl (module-name)
   "Load a PureScript module and its dependencies."
