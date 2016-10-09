@@ -149,39 +149,40 @@ in a buffer"
   "The psc-ide backend for 'company-mode'."
   (interactive (list 'interactive))
 
-  (cl-case command
-    (interactive (company-begin-backend 'company-psc-ide-backend))
+  (when (derived-mode-p 'purescript-mode)
+    (cl-case command
+      (interactive (company-begin-backend 'company-psc-ide-backend))
 
-    (init (psc-ide-init))
+      (init (psc-ide-init))
 
-    (prefix (when (and (eq major-mode 'purescript-mode)
-                       (not (company-in-string-or-comment)))
-              (let ((symbol (company-grab-symbol)))
-                (if symbol
-                    ;; We strip of the qualifier so that it doesn't get
-                    ;; overwritten when completing.
-                    (if (s-contains-p "." symbol)
-                        (cons (car (last (s-split "\\." symbol))) t)
-                      symbol)
-                  'stop))))
+      (prefix (when (and (eq major-mode 'purescript-mode)
+                         (not (company-in-string-or-comment)))
+                (let ((symbol (company-grab-symbol)))
+                  (if symbol
+                      ;; We strip of the qualifier so that it doesn't get
+                      ;; overwritten when completing.
+                      (if (s-contains-p "." symbol)
+                          (cons (car (last (s-split "\\." symbol))) t)
+                        symbol)
+                    'stop))))
 
-    (candidates (psc-ide-company-fetcher arg company--manual-action))
+      (candidates (psc-ide-company-fetcher arg company--manual-action))
 
-    (sorted t)
+      (sorted t)
 
-    (annotation (psc-ide-annotation arg))
+      (annotation (psc-ide-annotation arg))
 
-    (meta (psc-ide-string-fontified (get-text-property 0 :type arg)))
+      (meta (psc-ide-string-fontified (get-text-property 0 :type arg)))
 
-    (post-completion
-     (unless (or
-              ;; Don't add an import when the option to do so is disabled
-              (not psc-ide-add-import-on-completion)
-              ;; or when a qualified identifier was completed
-              (s-contains-p "." (company-grab-symbol)))
-       (psc-ide-add-import-impl arg (vector
-                                     (psc-ide-filter-modules
-                                      (list (get-text-property 0 :module arg)))))))))
+      (post-completion
+       (unless (or
+                ;; Don't add an import when the option to do so is disabled
+                (not psc-ide-add-import-on-completion)
+                ;; or when a qualified identifier was completed
+                (s-contains-p "." (company-grab-symbol)))
+         (psc-ide-add-import-impl arg (vector
+                                       (psc-ide-filter-modules
+                                        (list (get-text-property 0 :module arg))))))))))
 
 (defun psc-ide-server-start (dir-name)
   "Start 'psc-ide-server'."
