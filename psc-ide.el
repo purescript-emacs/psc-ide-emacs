@@ -265,7 +265,7 @@ none."
   "Takes a parsed JSON error/warning and displays it in the
 rebuild buffer."
   (let ((msg (concat type ": " (psc-ide-pretty-json-error rawMsg))))
-    (progn 
+    (progn
       (with-current-buffer (get-buffer-create "*psc-ide-rebuild*")
         (compilation-mode)
         (read-only-mode -1)
@@ -397,7 +397,7 @@ use when the search used was with `string-match'."
          (v (car (--drop-while (= (cdr it) (car it)) vs))))
     ;; if v is nil, the two versions were completely equal
     (if v
-        (>= (car compared) (cdr compared))
+        (>= (car v) (cdr v))
       t)))
 
 (defun psc-ide-load-module-impl (module-name)
