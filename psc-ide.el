@@ -135,7 +135,8 @@ in a buffer"
 
 (defun psc-ide-init ()
   (interactive)
-  (setq-local eldoc-documentation-function 'psc-ide-show-type-eldoc)
+  (add-function :before-until (local 'eldoc-documentation-function)
+                #'psc-ide-show-type-eldoc)
   (set (make-local-variable 'psc-ide-buffer-import-list)
        (psc-ide-parse-imports-in-buffer)))
 
