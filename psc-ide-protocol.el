@@ -25,7 +25,7 @@
                   "start it using psc-ide-server-start.")))))))
 
 (defun psc-ide-send (cmd callback)
-  (let ((buffer (generate-new-buffer "*psc-ide-client*")))
+  (let ((buffer (generate-new-buffer "*psc-ide-network-proc*")))
     (condition-case err
         (let ((proc (make-network-process
                      :name "psc-ide-server"

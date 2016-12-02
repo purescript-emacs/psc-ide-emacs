@@ -61,18 +61,13 @@
   :prefix "psc-ide-"
   :group 'psc-ide)
 
-(defcustom psc-ide-client-executable "psc-ide-client"
-  "Path to the 'psc-ide' executable."
-  :group 'psc-ide
-  :type  'string)
-
 (defcustom psc-ide-server-executable "psc-ide-server"
   "Path to the 'psc-ide-server' executable."
   :group 'psc-ide
   :type  'string)
 
 (defcustom psc-ide-port 4242
-  "The port that psc-ide-server and the client use."
+  "The port that psc-ide-server uses."
   :group 'psc-ide
   :type  'integer)
 
