@@ -117,13 +117,11 @@ Evaluates the CALLBACK in the context of the CURRENT buffer that initiated call 
                                   :importCommand "addImport"
                                   :identifier identifier)))))
 
-(defun psc-ide-command-rebuild (&optional filepath outpath)
+(defun psc-ide-command-rebuild (&optional filepath)
   (json-encode
    (list :command "rebuild"
          :params (list
-                  :file (or filepath (buffer-file-name (current-buffer)))
-                  :cacheSuccess t
-                  :outpath outpath))))
+                  :file (or filepath (buffer-file-name (current-buffer)))))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Protocol utilities.
