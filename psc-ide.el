@@ -208,9 +208,7 @@ in a buffer"
   (let ((ident (psc-ide-ident-at-point)))
     (-if-let (type-description (psc-ide-show-type-impl ident expand))
         (message "%s" (psc-ide-string-fontified type-description))
-      (message (concat "Know nothing about type of `%s'. "
-                       "Have you loaded the corresponding module?")
-               ident))))
+      (message "Know nothing about type of `%s'." ident))))
 
 (defun psc-ide-goto-definition ()
   "Go to definition of the symbol under cursor."
