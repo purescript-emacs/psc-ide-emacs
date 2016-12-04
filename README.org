@@ -35,6 +35,8 @@
 
 *** Start the Server ~C-c C-s~
 *** Load all the modules ~C-c C-l~
+    This isn't usually necessary, as the start server command sends a load all
+    command after starting the server.
 *** Get completions from the modules you imported while you type (through ~company-mode~)
     [[http://i.imgur.com/8WnRh0s.gif]]
 
@@ -49,6 +51,18 @@
 *** Show type for identifier under cursor ~C-c C-t~
     [[http://i.imgur.com/A8cXe9t.gif]]
 
+    Prepending the universal argument expands type synonyms in the displayed
+    type.
+
+    For example:
+    ~C-c C-t~ might return ~getName :: Person -> String~
+
+    If ~Person~ is a type synonym for a record you can use the universal
+    argument to inspect that record:
+
+    ~C-u C-c C-t~ will then return ~getName :: { name :: String, age :: Int } ->
+    String~
+
 *** Go to definition =M-.=
     You can use M-, to jump back to where you came from . If your sourcefiles
     are not captured by the default globs you can add a ~.dir-locals.el~ file to
@@ -60,11 +74,6 @@
             . ("src/**/*.purs" "bower_components/purescript-*/src/**/*.purs")))))
     #+END_SRC
     (Modify the globs accordingly)
-*** Add a clause for the function definition under cursor ~C-c C-a~
-    [[http://i.imgur.com/VNeC3z8.gif]]
-
-*** Case Split the given type under cursor ~C-c C-c~
-    [[http://i.imgur.com/hTnHxhK.gif]]
 
 *** Add an import for the identifier under cursor ~C-c C-i~
 
@@ -81,6 +90,11 @@
 
     [[http://i.imgur.com/r6rl2lT.gif]]
 
+*** Case Split the given type under cursor ~C-c C-c~
+    [[http://i.imgur.com/hTnHxhK.gif]]
+*** Add a clause for the function definition under cursor ~C-c C-a~
+    [[http://i.imgur.com/VNeC3z8.gif]]
+
 *** Rebuild the current module and get quick error reporting ~C-c C-b~
     If you set ~(customize-set-variable 'psc-ide-rebuild-on-save t)~ psc-ide will
     try to rebuild your module on every save.
@@ -93,8 +107,8 @@ This is determined by the variable ~psc-ide-flycheck-ignored-error-codes~. It ca
 with ~customize-option~ or similar methods.
 
 **** Insert suggestion from error ~C-c M-s~
-When the cursor is placed over an error that includes suggestion information, use ~C-c M-s~ to 
-apply the suggestion.
+     When the cursor is placed over an error that includes suggestion information, use ~C-c M-s~ to
+     apply the suggestion.
 
 *** Keybindings
 
@@ -102,11 +116,11 @@ apply the suggestion.
    |-------------+--------------------------------------|
    | ~C-c C-s~   | ~psc-ide-server-start~               |
    | ~C-c C-q~   | ~psc-ide-server-quit~                |
-   | ~C-c C-l~   | ~psc-ide-load-all~                   |
+   | ~C-c C-t~   | ~psc-ide-show-type~                  |
+   | ~C-c C-i~   | ~psc-ide-add-import~                 |
    | ~C-c C-a~   | ~psc-ide-add-clause~                 |
    | ~C-c C-c~   | ~psc-ide-case-split~                 |
-   | ~C-c C-i~   | ~psc-ide-add-import~                 |
-   | ~C-c C-t~   | ~psc-ide-show-type~                  |
+   | ~C-c C-l~   | ~psc-ide-load-all~                   |
    | ~C-c C-b~   | ~psc-ide-rebuild~                    |
    | ~C-c C-S-l~ | ~psc-ide-load-module~                |
    | ~C-c M-s~   | ~psc-ide-flycheck-insert-suggestion~ |
