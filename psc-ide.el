@@ -8,7 +8,7 @@
 ;;            Brian Sermons
 ;; Homepage : https://github.com/epost/psc-ide-emacs
 ;; Version  : 0.1.0
-;; Package-Requires: ((dash "2.12.1") (dash-functional "1.2.0") (company "0.8.7") (cl-lib "0.5") (s "1.10.0"))
+;; Package-Requires: ((dash "2.13.0") (dash-functional "1.2.0") (company "0.8.7") (cl-lib "0.5") (s "1.10.0") (emacs "24"))
 ;; Keywords : languages
 
 ;;; Commentary:
@@ -61,18 +61,13 @@
   :prefix "psc-ide-"
   :group 'psc-ide)
 
-(defcustom psc-ide-client-executable "psc-ide-client"
-  "Path to the 'psc-ide' executable."
-  :group 'psc-ide
-  :type  'string)
-
 (defcustom psc-ide-server-executable "psc-ide-server"
   "Path to the 'psc-ide-server' executable."
   :group 'psc-ide
   :type  'string)
 
 (defcustom psc-ide-port 4242
-  "The port that psc-ide-server and the client use."
+  "The port that psc-ide-server uses."
   :group 'psc-ide
   :type  'integer)
 
@@ -213,9 +208,7 @@ in a buffer"
   (let ((ident (psc-ide-ident-at-point)))
     (-if-let (type-description (psc-ide-show-type-impl ident expand))
         (message "%s" (psc-ide-string-fontified type-description))
-      (message (concat "Know nothing about type of `%s'. "
-                       "Have you loaded the corresponding module?")
-               ident))))
+      (message "Know nothing about type of `%s'." ident))))
 
 (defun psc-ide-goto-definition ()
   "Go to definition of the symbol under cursor."
