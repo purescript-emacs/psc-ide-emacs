@@ -200,7 +200,7 @@ in a buffer"
 (defun psc-ide-load-all ()
   "Loads all the modules in the current project"
   (interactive)
-  (psc-ide-send psc-ide-command-load-all (-const "yay")))
+  (psc-ide-send psc-ide-command-load-all 'psc-ide-unwrap-result))
 
 (defun psc-ide-show-type (expand)
   "Show type of the symbol under cursor."
