@@ -76,6 +76,13 @@
   :group 'psc-ide
   :type  'sexp)
 
+(defcustom psc-ide-output-directory "output/"
+  "Path to the output directory. Defaults to \"output/\" and
+  should only be changed with .dir-locals.el to accomodate for
+  project specific setups"
+  :group 'psc-ide
+  :type  'string)
+
 (defcustom psc-ide-debug nil
   "Whether psc-ide-server should be started with the debug flag"
   :group 'psc-ide
@@ -373,7 +380,7 @@ use when the search used was with `string-match'."
         (debug-flag (when psc-ide-debug "--debug"))
         (globs (when (psc-ide--version-gte (psc-ide-server-version) "0.9.2") psc-ide-source-globs)))
     (if path
-        (remove nil `(,path "-p" ,port "-d" ,directory ,debug-flag ,@globs))
+        (remove nil `(,path "-p" ,port "-d" ,directory "--output-directory" ,psc-ide-output-directory ,debug-flag ,@globs))
       (error (s-join " " '("Couldn't locate the psc-ide-server executable. You"
                            "could either customize the psc-ide-server-executable"
                            "setting, or put the executable on your path."))))))
