@@ -161,7 +161,7 @@ in a buffer"
                          (not (company-in-string-or-comment)))
                 (let ((symbol (company-grab-symbol)))
                   (if symbol
-                      ;; We strip of the qualifier so that it doesn't get
+                      ;; We strip the qualifier so that it doesn't get
                       ;; overwritten when completing.
                       (if (s-contains-p "." symbol)
                           (cons (car (last (s-split "\\." symbol))) t)
@@ -446,14 +446,19 @@ doesn't contain eventual qualifiers."
   "Constructs a completion command from the given SEARCH.
 The cases we have to cover:
 1. List.fil      <- filter by prefix and List module
-2. fil| + manual <- don't filter at all
-3. fil|          <- filter by prefix and imported modules"
+2. record.       <- filter by prefix and List module
+3. fil| + manual <- don't filter at all
+4. fil|          <- filter by prefix and imported modules"
   (let* ((components (s-split "\\." search))
          (prefix (car (last components)))
          (alias (s-join "." (butlast components))))
     (if (not (s-blank? alias))
         ;; 1. List.fil <- filter by prefix and List module
-        (psc-ide-qualified-completion-command prefix alias)
+        (if (s-lowercase? (substring alias 0 1))
+            (progn
+              (save-buffer)
+              (psc-ide-command-completes))
+          (psc-ide-qualified-completion-command prefix alias))
       (if manual
           ;; 2. fil| + manual <- don't filter at all
           (psc-ide-command-complete
