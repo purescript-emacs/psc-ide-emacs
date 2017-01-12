@@ -90,18 +90,12 @@ initiated call if it still exists."
                             ,@(when matcher (list :matcher matcher))
                             ,@(when module (list :currentModule module)))))))
 
-(defun psc-ide-completes ()
-  (interactive)
-  (print
-   (psc-ide-unwrap-result
-    (psc-ide-send-sync (psc-ide-command-completes)))))
-
-(defun psc-ide-command-completes ()
+(defun psc-ide-command-completes (&optional path row column)
   (json-encode
    (list :command "completeS"
-         :params (list :path (buffer-file-name (current-buffer))
-                       :row (line-number-at-pos)
-                       :column (current-column)))))
+         :params (list :path (or path (buffer-file-name (current-buffer)))
+                       :row (or row (line-number-at-pos))
+                       :column (or column (current-column))))))
 
 (defun psc-ide-command-case-split (line begin end type)
   (json-encode
