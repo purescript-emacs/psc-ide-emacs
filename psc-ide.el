@@ -574,7 +574,11 @@ Returns NIL if the type of SEARCH is not found."
          (psc-ide-get-module-name))))
 
 (defun psc-ide-annotation (s)
-  (format " (%s)" (get-text-property 0 :module s)))
+  (let ((moduleName (get-text-property 0 :module s)))
+    (if (string-equal "" moduleName)
+        ""
+      (format " (%s)" moduleName))))
+
 
 (defun psc-ide-suggest-project-dir ()
   (if (fboundp 'projectile-project-root)
