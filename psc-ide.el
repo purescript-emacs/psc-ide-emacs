@@ -456,8 +456,9 @@ The cases we have to cover:
         ;; 1. List.fil <- filter by prefix and List module
         (if (s-lowercase? (substring alias 0 1))
             (progn
-              (save-buffer)
-              (psc-ide-command-completes))
+              (let ((tmp-file (make-temp-file "psc-ide-complete-record")))
+                (write-region (point-min) (point-max) tmp-file)
+                (psc-ide-command-completes tmp-file)))
           (psc-ide-qualified-completion-command prefix alias))
       (if manual
           ;; 2. fil| + manual <- don't filter at all
