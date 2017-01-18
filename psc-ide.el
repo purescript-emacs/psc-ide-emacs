@@ -66,6 +66,11 @@
   :group 'psc-ide
   :type  'string)
 
+(defcustom psc-ide-use-npm-bin nil
+  "Whether to use `npm bin` to determine the location of the psc-ide server."
+  :group 'psc-ide
+  :type  'boolean)
+
 (defcustom psc-ide-port 4242
   "The port that psc-ide-server uses."
   :group 'psc-ide
@@ -374,16 +379,26 @@ use when the search used was with `string-match'."
   "Tries to find the psc-ide-server-executable and builds up the
   command by appending eventual options. Returns a list that can
   be expanded and passed to start-process"
-  (let ((path (executable-find psc-ide-server-executable))
-        (port (number-to-string psc-ide-port))
-        (directory (expand-file-name dir-name))
-        (debug-flag (when psc-ide-debug "--debug"))
-        (globs (when (psc-ide--version-gte (psc-ide-server-version) "0.9.2") psc-ide-source-globs)))
+  (let* ((npm-bin-path (if psc-ide-use-npm-bin
+                           (psc-ide-npm-bin-server-executable)
+                         nil))
+         (path (or npm-bin-path (executable-find psc-ide-server-executable)))
+         (port (number-to-string psc-ide-port))
+         (directory (expand-file-name dir-name))
+         (debug-flag (when psc-ide-debug "--debug"))
+         (globs (when (psc-ide--version-gte (psc-ide-server-version) "0.9.2") psc-ide-source-globs)))
     (if path
         (remove nil `(,path "-p" ,port "-d" ,directory "--output-directory" ,psc-ide-output-directory ,debug-flag ,@globs))
       (error (s-join " " '("Couldn't locate the psc-ide-server executable. You"
                            "could either customize the psc-ide-server-executable"
-                           "setting, or put the executable on your path."))))))
+                           "setting, or set the psc-ide-use-npm-bin variable to"
+                           "true, or put the executable on your path."))))))
+
+(defun psc-ide-npm-bin-server-executable ()
+  "Find psc-ide binaries of current project by searching for node_modules."
+  (let* ((npm-bin (s-trim-right (shell-command-to-string "npm bin")))
+         (server (expand-file-name psc-ide-server-executable npm-bin)))
+    (if (and server (file-executable-p server)) server nil)))
 
 (defun psc-ide-server-version ()
   "Returns the version of the found psc-ide-server executable"
