@@ -422,7 +422,7 @@ use when the search used was with `string-match'."
                                 (-map (lambda (x)
                                         (cdr (assoc 'module x))) result))))
           (psc-ide-add-import-impl identifier (vector (psc-ide-filter-modules (vector selection)))))
-      (progn (message (concat "Added import for " identifier))
+      (progn (message "Added import for %s" identifier)
              (save-restriction
                (widen)
                ;; command successful, insert file with replacement to preserve
