@@ -395,7 +395,7 @@ use when the search used was with `string-match'."
                            "true, or put the executable on your path."))))))
 
 (defun psc-ide-npm-bin-server-executable ()
-  "Find psc-ide binaries of current project by searching for node_modules."
+  "Find psc-ide-server binary of current project by invoking `npm bin`"
   (let* ((npm-bin (s-trim-right (shell-command-to-string "npm bin")))
          (server (expand-file-name psc-ide-server-executable npm-bin)))
     (if (and server (file-executable-p server)) server nil)))
