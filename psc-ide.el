@@ -458,7 +458,7 @@ The cases we have to cover:
             (progn
               (let ((tmp-file (make-temp-file "psc-ide-complete-record")))
                 (write-region (point-min) (point-max) tmp-file)
-                (psc-ide-command-completes tmp-file)))
+                (psc-ide-command-complete-contextual tmp-file)))
           (psc-ide-qualified-completion-command prefix alias))
       (if manual
           ;; 2. fil| + manual <- don't filter at all

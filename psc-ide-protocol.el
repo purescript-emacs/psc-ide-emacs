@@ -90,9 +90,9 @@ initiated call if it still exists."
                             ,@(when matcher (list :matcher matcher))
                             ,@(when module (list :currentModule module)))))))
 
-(defun psc-ide-command-completes (&optional path row column)
+(defun psc-ide-command-complete-contextual (&optional path row column)
   (json-encode
-   (list :command "completeS"
+   (list :command "completeContextual"
          :params (list :path (or path (buffer-file-name (current-buffer)))
                        :row (or row (line-number-at-pos))
                        :column (or column (current-column))))))
