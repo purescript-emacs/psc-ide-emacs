@@ -31,9 +31,18 @@
        (turn-on-purescript-indentation)))
    #+END_SRC
 
+   If you want to use the psc-ide server that is relative to your `npm bin`
+   directory, e.g. `./node_modules/.bin/psc-ide-server`, add this line to your
+   config:
+
+   #+BEGIN_SRC elisp
+   (setq psc-ide-use-npm-bin t)
+   #+END_SRC
+
 ** Usage
 
 *** Start the Server ~C-c C-s~
+
 *** Load all the modules ~C-c C-l~
     This isn't usually necessary, as the start server command sends a load all
     command after starting the server.
