@@ -217,10 +217,7 @@ in a buffer"
 (defun psc-ide-show-type (expand)
   "Show type of the symbol under cursor."
   (interactive "P")
-  (let ((ident (psc-ide-ident-at-point)))
-    (-if-let (type-description (psc-ide-show-type-impl ident expand))
-        (message "%s" (psc-ide-string-fontified type-description))
-      (message "Know nothing about type of `%s'." ident))))
+  (psc-ide-show-type-impl (psc-ide-ident-at-point) t expand))
 
 (defun psc-ide-goto-definition ()
   "Go to definition of the symbol under cursor."
@@ -303,9 +300,7 @@ nicely displayed inside a compilation buffer."
 
 (defun psc-ide-show-type-eldoc ()
   "Show type of the symbol under cursor, but be quiet about failures"
-  (let ((ident (psc-ide-ident-at-point)))
-    (-when-let (type-description (psc-ide-show-type-impl ident))
-      (message "%s" (psc-ide-string-fontified type-description)))))
+  (psc-ide-show-type-impl (psc-ide-ident-at-point)))
 
 (defun psc-ide-case-split-impl (type)
   "Case Split on identifier under cursor"
@@ -549,18 +544,22 @@ passes it into the callback"
               (forward-char (1- column)))
           (message (format "No position information for %s" search)))))))
 
-(defun psc-ide-show-type-impl (search &optional expand)
-  "Returns a string that describes the type of SEARCH.
-Returns NIL if the type of SEARCH is not found."
-  (let* ((resp (psc-ide-send-sync
-                (psc-ide-build-type-command search)))
-         (result (psc-ide-unwrap-result resp)))
-    (when (not (zerop (length result)))
-      (let* ((completion (aref result 0))
-             (type (cdr (assoc (if expand 'expandedType 'type) completion)))
-             (module (cdr (assoc 'module completion)))
-             (identifier (cdr (assoc 'identifier completion))))
-        (s-concat module "." identifier " :: \n  " type)))))
+(defun psc-ide-show-type-impl (search &optional warn expand)
+  "Prints a message that describes the type of SEARCH.
+If the type of SEARCH is not found it prints a warning depending
+on whether WARN is true."
+  (let ((handler
+         (lambda (resp)
+           (let ((result (psc-ide-unwrap-result resp)))
+             (if (not (zerop (length result)))
+               (let-alist (aref result 0)
+                 (message (psc-ide-string-fontified
+                           (format "%s.%s ::\n  %s"
+                                   .module
+                                   .identifier
+                                   (if expand .expandedType .type)))))
+               (when warn (message "Know nothing about type of `%s'." search)))))))
+    (psc-ide-send (psc-ide-build-type-command search) handler)))
 
 (defun psc-ide-build-type-command (search)
   "Builds a type command from SEARCH."
