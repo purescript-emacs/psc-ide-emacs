@@ -27,17 +27,6 @@ import Halogen.HTML.Events.Indexed as P
   (psc-ide-test-example-with-buffer
     (lambda () (psc-ide-parse-imports-in-buffer))))
 
-(ert-deftest psc-ide-show-type-impl-test ()
-  (with-mock
-   (mock (psc-ide-send-sync *) => (json-read-from-string "{\"result\":[{\"type\":\"Show-Type\",\"module\":\"Module\",\"identifier\":\"something\"}],\"resultType\":\"success\"}\n"))
-   (should (string= "Module.something :: \n  Show-Type"
-                    (psc-ide-show-type-impl "something"))))
-
-  (with-mock
-   (mock (psc-ide-send-sync *) => (json-read-from-string "{\"result\":[],\"resultType\":\"success\"}\n"))
-   (should (not (psc-ide-show-type-impl "something")))))
-
-
 ;; Module  import parsing tests
 
 (ert-deftest test-get-import-matches-in-buffer-should-return-all-imports ()
