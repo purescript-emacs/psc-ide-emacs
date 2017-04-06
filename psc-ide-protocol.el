@@ -46,7 +46,8 @@
 
 (defun wrap-psc-ide-callback (callback buffer current proc status)
   "Wraps a function that expects a parsed psc-ide response.
-Evaluates the CALLBACK in the context of the CURRENT buffer that initiated call if it still exists."
+Evaluates the CALLBACK in the context of the CURRENT buffer that
+initiated call if it still exists."
   (when (string= "closed" (process-status proc))
     (let ((parsed
            (with-current-buffer buffer
@@ -89,6 +90,13 @@ Evaluates the CALLBACK in the context of the CURRENT buffer that initiated call 
                             ,@(when matcher (list :matcher matcher))
                             ,@(when module (list :currentModule module)))))))
 
+(defun psc-ide-command-complete-contextual (&optional path row column)
+  (json-encode
+   (list :command "completeContextual"
+         :params (list :path (or path (buffer-file-name (current-buffer)))
+                       :row (or row (line-number-at-pos))
+                       :column (or column (current-column))))))
+
 (defun psc-ide-command-case-split (line begin end type)
   (json-encode
    (list :command "caseSplit"
@@ -122,6 +130,14 @@ Evaluates the CALLBACK in the context of the CURRENT buffer that initiated call 
    (list :command "rebuild"
          :params (list
                   :file (or filepath (buffer-file-name (current-buffer)))))))
+
+
+(defun psc-ide-command-pursuit-query (query)
+  (json-encode
+   (list :command "pursuit"
+         :params (list
+                  :type "completion"
+                  :query query))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Protocol utilities.
