@@ -61,13 +61,13 @@
   :prefix "psc-ide-"
   :group 'psc-ide)
 
-(defcustom psc-ide-server-executable "psc-ide-server"
-  "Path to the 'psc-ide-server' executable."
+(defcustom purs-executable "purs"
+  "Path to the 'purs' executable."
   :group 'psc-ide
   :type  'string)
 
 (defcustom psc-ide-use-npm-bin nil
-  "Whether to use `npm bin` to determine the location of the psc-ide server."
+  "Whether to use `npm bin` to determine the location of the purs ide server."
   :group 'psc-ide
   :type  'boolean)
 
@@ -371,33 +371,34 @@ use when the search used was with `string-match'."
                           ,@(psc-ide-server-command dir-name))))
 
 (defun psc-ide-server-command (dir-name)
-  "Tries to find the psc-ide-server-executable and builds up the
+  "Tries to find the purs executable and builds up the
   command by appending eventual options. Returns a list that can
   be expanded and passed to start-process"
   (let* ((npm-bin-path (if psc-ide-use-npm-bin
                            (psc-ide-npm-bin-server-executable)
                          nil))
-         (path (or npm-bin-path (executable-find psc-ide-server-executable)))
+         (path (or npm-bin-path (executable-find purs-executable)))
          (port (number-to-string psc-ide-port))
          (directory (expand-file-name dir-name))
-         (debug-flag (when psc-ide-debug "--debug"))
-         (globs (when (psc-ide--version-gte (psc-ide-server-version) "0.9.2") psc-ide-source-globs)))
+         (debug-flags (when psc-ide-debug '("--log-level" "debug")))
+         ;; (globs (when (psc-ide--version-gte (psc-ide-server-version) "0.9.2") psc-ide-source-globs))
+         )
     (if path
-        (remove nil `(,path "-p" ,port "-d" ,directory "--output-directory" ,psc-ide-output-directory ,debug-flag ,@globs))
-      (error (s-join " " '("Couldn't locate the psc-ide-server executable. You"
-                           "could either customize the psc-ide-server-executable"
+        (remove nil `(,path "ide" "server" "-p" ,port "-d" ,directory "--output-directory" ,psc-ide-output-directory ,@debug-flags))
+      (error (s-join " " '("Couldn't locate the purs executable. You"
+                           "could either customize the purs-executable"
                            "setting, or set the psc-ide-use-npm-bin variable to"
                            "true, or put the executable on your path."))))))
 
 (defun psc-ide-npm-bin-server-executable ()
   "Find psc-ide-server binary of current project by invoking `npm bin`"
   (let* ((npm-bin (s-trim-right (shell-command-to-string "npm bin")))
-         (server (expand-file-name psc-ide-server-executable npm-bin)))
+         (server (expand-file-name purs-executable npm-bin)))
     (if (and server (file-executable-p server)) server nil)))
 
 (defun psc-ide-server-version ()
   "Returns the version of the found psc-ide-server executable"
-  (let ((path (executable-find psc-ide-server-executable)))
+  (let ((path (executable-find purs-executable)))
     (s-chomp (shell-command-to-string (s-concat path " --version")))))
 
 (defun psc-ide--version-gte (version1 version2)
