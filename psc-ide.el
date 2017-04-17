@@ -384,11 +384,14 @@ use when the search used was with `string-match'."
   "Tries to find the psc-ide executable and builds up the
   command by appending eventual options. Returns a list that can
   be expanded and passed to start-process"
-  (let* ((cmd (psc-ide-executable-name))
+  (let* ((executable-name (psc-ide-executable-name))
          (npm-bin-path (if psc-ide-use-npm-bin
-                           (psc-ide-npm-bin-server-executable cmd)
+                           (psc-ide-npm-bin-server-executable executable-name)
                          nil))
-         (path (or npm-bin-path (executable-find cmd)))
+         (path (or npm-bin-path (executable-find executable-name)))
+         (cmd (if psc-ide-use-purs
+                  `(,path "ide" "server")
+                `(,path)))
          (port (number-to-string psc-ide-port))
          (directory (expand-file-name dir-name))
          (debug-flags (when psc-ide-debug (if psc-ide-use-purs
@@ -399,10 +402,10 @@ use when the search used was with `string-match'."
                                                  "0.9.2"))
                   psc-ide-source-globs)))
     (if path
-        (remove nil `(,path "ide" "server" "-p" ,port "-d" ,directory "--output-directory" ,psc-ide-output-directory ,@debug-flags ,@globs))
+        (remove nil `(,@cmd "-p" ,port "-d" ,directory "--output-directory" ,psc-ide-output-directory ,@debug-flags ,@globs))
       (error (s-join " " '("Couldn't locate psc ide executable. You"
                            "could either customize the psc-ide-server-executable"
-                           " or psc-ide-purs-executable if psc-ide-use-purs is on."
+                           " or psc-ide-purs-executable if psc-ide-use-purs is t."
                            "set the psc-ide-use-npm-bin variable to"
                            "true, or put the executable on your path."))))))
 (defun psc-ide-executable-name ()
