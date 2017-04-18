@@ -2,7 +2,7 @@
 
 * psc-ide-emacs
 
-  Emacs integration for [[https://github.com/purescript/purescript/tree/master/psc-ide-server][psc-ide]]
+  Emacs integration for [[https://github.com/purescript/purescript/tree/master/psc-ide][psc-ide]]
 
 ** Installation
 
@@ -32,7 +32,7 @@
    #+END_SRC
 
    If you want to use the psc-ide server that is relative to your `npm bin`
-   directory, e.g. `./node_modules/.bin/psc-ide-server`, add this line to your
+   directory, e.g. `./node_modules/.bin/purs`, add this line to your
    config:
 
    #+BEGIN_SRC elisp
