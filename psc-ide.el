@@ -76,8 +76,8 @@
   :group 'psc-ide
   :type  'boolean)
 
-(defcustom psc-ide-use-purs nil
-  "Whether to use `purs ide' to start psc ide server"
+(defcustom psc-ide-use-purs t
+  "Whether to use `purs ide' to start psc ide server, if nil fallback to use old psc-ide-server"
   :group 'psc-ide
   :type 'boolean)
 
@@ -396,18 +396,14 @@ use when the search used was with `string-match'."
          (directory (expand-file-name dir-name))
          (debug-flags (when psc-ide-debug (if psc-ide-use-purs
                                               '("--log-level" "debug")
-                                            '("--debug"))))
-         (globs (when (and (not psc-ide-use-purs)
-                           (psc-ide--version-gte (psc-ide-server-version)
-                                                 "0.9.2"))
-                  psc-ide-source-globs)))
+                                            '("--debug")))))
     (if path
-        (remove nil `(,@cmd "-p" ,port "-d" ,directory "--output-directory" ,psc-ide-output-directory ,@debug-flags ,@globs))
+        (remove nil `(,@cmd "-p" ,port "-d" ,directory "--output-directory" ,psc-ide-output-directory ,@debug-flags ,@psc-ide-source-globs))
       (error (s-join " " '("Couldn't locate psc ide executable. You"
-                           "could either customize the psc-ide-server-executable"
-                           " or psc-ide-purs-executable if psc-ide-use-purs is t."
-                           "set the psc-ide-use-npm-bin variable to"
-                           "true, or put the executable on your path."))))))
+                           "could either customize the psc-ide-purs-executable"
+                           " or psc-ide-server-executable if psc-ide-use-purs is nil,"
+                           " or set the psc-ide-use-npm-bin variable to"
+                           " true, or put the executable on your path."))))))
 (defun psc-ide-executable-name ()
   "Find ide executable name"
   (if psc-ide-use-purs
