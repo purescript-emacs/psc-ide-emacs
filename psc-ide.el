@@ -114,6 +114,12 @@
   :group 'psc-ide
   :type 'boolean)
 
+(defcustom psc-ide-add-qualification-on-completion "t"
+  "Whether to automatically prepend the qualifier for completions
+that are imported qualified in the current module"
+  :group 'psc-ide
+  :type 'boolean)
+
 (defcustom psc-ide-rebuild-on-save nil
   "Whether to rebuild files on save and display errors/warnings
 in a buffer"
@@ -196,7 +202,7 @@ in a buffer"
                 ;; Don't add an import when the option to do so is disabled
                 (not psc-ide-add-import-on-completion)
                 ;; or when a qualified identifier was completed
-                (s-contains-p "." (company-grab-symbol)))
+                (or (get-text-property 0 :alias arg) (s-contains-p "." (company-grab-symbol))))
          (psc-ide-add-import-impl arg (vector
                                        (psc-ide-filter-modules
                                         (list (get-text-property 0 :module arg))))))))))
@@ -222,7 +228,8 @@ in a buffer"
 (defun psc-ide-load-all ()
   "Loads all the modules in the current project"
   (interactive)
-  (psc-ide-send psc-ide-command-load-all 'psc-ide-unwrap-result))
+  (psc-ide-send psc-ide-command-load-all
+                (-compose 'message 'psc-ide-unwrap-result)))
 
 (defun psc-ide-show-type (expand)
   "Show type of the symbol under cursor."
@@ -520,26 +527,42 @@ The cases we have to cover:
              (when (equal alias (cdr (assoc 'alias import)))
                (cdr (assoc 'module import)))) imports)))
 
+(defun psc-ide-alias-for-module (module &optional parsed-imports)
+  "Searches the current module's imports for MODULE and returns
+its alias. Returns nil if the module is not imported qualified"
+  (let ((imports (or parsed-imports (psc-ide-parse-imports-in-buffer))))
+    (-first-item
+     (-keep (lambda (import)
+              (when (equal module (cdr (assoc 'module import)))
+                (cdr (assoc 'alias import)))) imports))))
+
 (defun psc-ide-handle-completionresponse (callback response)
   "Accepts a callback and a completion response from psc-ide,
 processes the response into a format suitable for company and
 passes it into the callback"
   (let* ((result (psc-ide-unwrap-result response))
-         (completions (-map 'psc-ide-annotate-completion result)))
+         (completions (-map (-partial 'psc-ide-annotate-completion (psc-ide-parse-imports-in-buffer)) result)))
     (funcall callback completions)))
 
-(defun psc-ide-annotate-completion (completion)
+(defun psc-ide-annotate-completion (parsed-imports completion)
   "Turns a completion from psc-ide into a string with
   text-properties, which carry additional information"
-  (let ((identifier (cdr (assoc 'identifier completion)))
-        (type (cdr (assoc 'type completion)))
-        (module (cdr (assoc 'module completion))))
-    ;; :qualifier qualifier <- TODO: Add this back in
-    (add-text-properties 0 1 (list :type type
-                                   :module module) identifier)
-    ;; add-text-properties is sideeffecting and doesn't return the modified
-    ;; string, so we need to explicitly return the identifier from here
-    identifier))
+  (let-alist completion
+    (let* ((alias (psc-ide-alias-for-module .module parsed-imports))
+           (identifier  (if (and psc-ide-add-qualification-on-completion
+                                 alias
+                                 ;; Don't add a qualifier if we're already
+                                 ;; completing a qualified prefix
+                                 (not (s-contains-p "." (company-grab-symbol))))
+                            (format "%s.%s" alias .identifier)
+                          .identifier)))
+
+      (add-text-properties 0 1 (list :type .type
+                                     :module .module
+                                     :alias alias) identifier)
+      ;; add-text-properties is sideeffecting and doesn't return the modified
+      ;; string, so we need to explicitly return the identifier from here
+      identifier)))
 
 (defun psc-ide-goto-definition-impl (search)
   "Asks for the definition location of SEARCH and jumps to it."
