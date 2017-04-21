@@ -114,6 +114,12 @@
   :group 'psc-ide
   :type 'boolean)
 
+(defcustom psc-ide-add-qualification-on-completion "t"
+  "Whether to automatically prepend the qualifier for completions
+that are imported qualified in the current module"
+  :group 'psc-ide
+  :type 'boolean)
+
 (defcustom psc-ide-rebuild-on-save nil
   "Whether to rebuild files on save and display errors/warnings
 in a buffer"
@@ -196,7 +202,7 @@ in a buffer"
                 ;; Don't add an import when the option to do so is disabled
                 (not psc-ide-add-import-on-completion)
                 ;; or when a qualified identifier was completed
-                (s-contains-p "." (company-grab-symbol)))
+                (or (get-text-property 0 :qualifier arg) (s-contains-p "." (company-grab-symbol))))
          (psc-ide-add-import-impl arg (vector
                                        (psc-ide-filter-modules
                                         (list (get-text-property 0 :module arg))))))))))
@@ -222,7 +228,8 @@ in a buffer"
 (defun psc-ide-load-all ()
   "Loads all the modules in the current project"
   (interactive)
-  (psc-ide-send psc-ide-command-load-all 'psc-ide-unwrap-result))
+  (psc-ide-send psc-ide-command-load-all
+                (-compose 'message 'psc-ide-unwrap-result)))
 
 (defun psc-ide-show-type (expand)
   "Show type of the symbol under cursor."
@@ -349,7 +356,7 @@ use when the search used was with `string-match'."
          (idx 3)
          result)
     (push `(module . ,(match-string-no-properties 1 string)) result)
-    (push `(alias . ,(match-string-no-properties 3 string)) result)
+    (push `(qualifier . ,(match-string-no-properties 3 string)) result)
     result))
 
 (defun psc-ide-parse-imports-in-buffer (&optional buffer)
@@ -481,10 +488,10 @@ The cases we have to cover:
 3. fil|          <- filter by prefix and imported modules"
   (let* ((components (s-split "\\." search))
          (prefix (car (last components)))
-         (alias (s-join "." (butlast components))))
-    (if (not (s-blank? alias))
+         (qualifier (s-join "." (butlast components))))
+    (if (not (s-blank? qualifier))
         ;; 1. List.fil <- filter by prefix and List module
-        (psc-ide-qualified-completion-command prefix alias)
+        (psc-ide-qualified-completion-command prefix qualifier)
       (if manual
           ;; 2. fil| + manual <- don't filter at all
           (psc-ide-command-complete
@@ -498,9 +505,9 @@ The cases we have to cover:
          nil
          (psc-ide-get-module-name))))))
 
-(defun psc-ide-qualified-completion-command (prefix alias)
-  "Builds a completion command for a PREFIX with ALIAS"
-  (let ((modules (psc-ide-modules-for-alias alias)))
+(defun psc-ide-qualified-completion-command (prefix qualifier)
+  "Builds a completion command for a PREFIX with QUALIFIERF"
+  (let ((modules (psc-ide-modules-for-qualifier qualifier)))
     (psc-ide-command-complete
      (vector (psc-ide-filter-prefix prefix)
              (psc-ide-filter-modules (vconcat modules)))
@@ -512,34 +519,50 @@ The cases we have to cover:
   (-map (lambda (import) (cdr (assoc 'module import)))
         (psc-ide-parse-imports-in-buffer)))
 
-(defun psc-ide-modules-for-alias (alias)
+(defun psc-ide-modules-for-qualifier (qualifier)
   "Searches the current module's imports for modules that are
-  qualified as ALIAS"
+  qualified as QUALIFIER"
   (let ((imports (psc-ide-parse-imports-in-buffer)))
     (-keep (lambda (import)
-             (when (equal alias (cdr (assoc 'alias import)))
+             (when (equal qualifier (cdr (assoc 'qualifier import)))
                (cdr (assoc 'module import)))) imports)))
+
+(defun psc-ide-qualifier-for-module (module &optional parsed-imports)
+  "Searches the current module's imports for MODULE and returns
+its qualifier. Returns nil if the module is not imported qualified"
+  (let ((imports (or parsed-imports (psc-ide-parse-imports-in-buffer))))
+    (-first-item
+     (-keep (lambda (import)
+              (when (equal module (cdr (assoc 'module import)))
+                (cdr (assoc 'qualifier import)))) imports))))
 
 (defun psc-ide-handle-completionresponse (callback response)
   "Accepts a callback and a completion response from psc-ide,
 processes the response into a format suitable for company and
 passes it into the callback"
   (let* ((result (psc-ide-unwrap-result response))
-         (completions (-map 'psc-ide-annotate-completion result)))
+         (completions (-map (-partial 'psc-ide-annotate-completion (psc-ide-parse-imports-in-buffer)) result)))
     (funcall callback completions)))
 
-(defun psc-ide-annotate-completion (completion)
+(defun psc-ide-annotate-completion (parsed-imports completion)
   "Turns a completion from psc-ide into a string with
   text-properties, which carry additional information"
-  (let ((identifier (cdr (assoc 'identifier completion)))
-        (type (cdr (assoc 'type completion)))
-        (module (cdr (assoc 'module completion))))
-    ;; :qualifier qualifier <- TODO: Add this back in
-    (add-text-properties 0 1 (list :type type
-                                   :module module) identifier)
-    ;; add-text-properties is sideeffecting and doesn't return the modified
-    ;; string, so we need to explicitly return the identifier from here
-    identifier))
+  (let-alist completion
+    (let* ((qualifier (psc-ide-qualifier-for-module .module parsed-imports))
+           (identifier  (if (and psc-ide-add-qualification-on-completion
+                                 qualifier
+                                 ;; Don't add a qualifier if we're already
+                                 ;; completing a qualified prefix
+                                 (not (s-contains-p "." (company-grab-symbol))))
+                            (format "%s.%s" qualifier .identifier)
+                          .identifier)))
+
+      (add-text-properties 0 1 (list :type .type
+                                     :module .module
+                                     :qualifier qualifier) identifier)
+      ;; add-text-properties is sideeffecting and doesn't return the modified
+      ;; string, so we need to explicitly return the identifier from here
+      identifier)))
 
 (defun psc-ide-goto-definition-impl (search)
   "Asks for the definition location of SEARCH and jumps to it."
@@ -586,18 +609,18 @@ on whether WARN is true."
   "Builds a type command from SEARCH."
   (let* ((components (s-split "\\." search))
          (ident (car (last components)))
-         (alias (s-join "." (butlast components))))
-    (if (not (s-blank? alias))
-      (psc-ide-qualified-type-command ident alias)
+         (qualifier (s-join "." (butlast components))))
+    (if (not (s-blank? qualifier))
+      (psc-ide-qualified-type-command ident qualifier)
     (psc-ide-command-show-type
      (vector (psc-ide-filter-modules
               (psc-ide-all-imported-modules)))
      ident
      (psc-ide-get-module-name)))))
 
-(defun psc-ide-qualified-type-command (ident alias)
-  "Builds a type command for an IDENT with ALIAS"
-  (let ((modules (psc-ide-modules-for-alias alias)))
+(defun psc-ide-qualified-type-command (ident qualifier)
+  "Builds a type command for an IDENT with QUALIFIER"
+  (let ((modules (psc-ide-modules-for-qualifier qualifier)))
         (psc-ide-command-show-type
          (vector (psc-ide-filter-modules (vconcat modules)))
          ident

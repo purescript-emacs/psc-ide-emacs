@@ -40,7 +40,7 @@ import Halogen.HTML.Events.Indexed as P
     (string-match psc-ide-import-regex import)
     (let* ((import (psc-ide-extract-import-from-match-data import)))
       (should (equal (assoc 'module import) (cons 'module name)))
-      (should (equal (assoc 'alias import) (cons 'alias as)))))
+      (should (equal (assoc 'qualifier import) (cons 'qualifier as)))))
 
 (ert-deftest test-get-import-from-match-data-full ()
   (test-import "import Mod.SubMod (foo, bar) as El"
@@ -50,7 +50,7 @@ import Halogen.HTML.Events.Indexed as P
 (ert-deftest test-match-import-single-module ()
   (test-import "import Foo" "Foo" nil))
 
-(ert-deftest test-match-import-with-alias ()
+(ert-deftest test-match-import-with-qualifier ()
   (test-import "import Foo as F" "Foo" "F"))
 
 (ert-deftest test-match-import-with-single-expose ()
@@ -62,10 +62,10 @@ import Halogen.HTML.Events.Indexed as P
 (ert-deftest test-match-import-with-multiple-exposings-loose ()
   (test-import "import Foo ( test1 , test2 )" "Foo" nil))
 
-(ert-deftest test-match-import-with-alias+multiple-exposings-tight ()
+(ert-deftest test-match-import-with-qualifier+multiple-exposings-tight ()
   (test-import "import Foo (test1,test2) as F" "Foo" "F"))
 
-(ert-deftest test-match-import-with-alias+multiple-exposings-loose ()
+(ert-deftest test-match-import-with-qualifier+multiple-exposings-loose ()
   (test-import
    "import Foo ( test1 , test2 ) as F"
    "Foo"
@@ -76,9 +76,9 @@ import Halogen.HTML.Events.Indexed as P
                    (lambda () (psc-ide-all-imported-modules)))))
     (should (equal (length imports) 10))))
 
-(ert-deftest test-moduels-for-alias ()
+(ert-deftest test-moduels-for-qualifier ()
   (let ((imports (psc-ide-test-example-with-buffer
-                   (lambda () (psc-ide-modules-for-alias "P")))))
+                   (lambda () (psc-ide-modules-for-qualifier "P")))))
     (should (equal (length imports) 2))))
 
 (ert-deftest test-get-completion-settings ()
