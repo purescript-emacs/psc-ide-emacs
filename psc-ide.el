@@ -168,13 +168,14 @@ in a buffer"
     (require 'psc-ide-flycheck)
     (psc-ide-flycheck-setup)))
 
-(defun company-psc-ide-backend (command &optional arg &rest ignored)
+
+(defun psc-ide-company-backend (command &optional arg &rest ignored)
   "The psc-ide backend for 'company-mode'."
   (interactive (list 'interactive))
 
   (when (derived-mode-p 'purescript-mode)
     (cl-case command
-      (interactive (company-begin-backend 'company-psc-ide-backend))
+      (interactive (company-begin-backend 'psc-ide-company-backend))
 
       (init (psc-ide-init))
 
@@ -281,6 +282,61 @@ none."
             (delete-windows-on (get-buffer-create "*psc-ide-rebuild*"))
             (message "OK"))
         (psc-ide-display-rebuild-message "Warning" (aref result 0))))))
+
+(defun psc-ide-is-record-completion ()
+  (save-excursion
+    (when (word-at-point)
+      (backward-word))
+    (when (string-equal (char-to-string (char-before)) ".")
+      (backward-char 1)
+      (s-lowercase? (substring (word-at-point) 0 1)))))
+
+(defun psc-ide-company-record-backend (command &optional arg &rest ignored)
+    "The psc-ide backend for record completions."
+    (interactive (list 'interactive))
+    (when (derived-mode-p 'purescript-mode)
+      (cl-case command
+        (interactive (company-begin-backend 'psc-ide-company-record-backend))
+        (prefix (when (psc-ide-is-record-completion) (cons (or (word-at-point) "") 't)))
+        (candidates (psc-ide-record-completion))
+        (meta (psc-ide-string-fontified (get-text-property 0 :type arg))))))
+
+(defun psc-ide-rebuild-hole (fp)
+  (interactive)
+  (let ((response (psc-ide-send-sync (psc-ide-command-rebuild fp))))
+    (let-alist response
+      (let ((is-success (string= "success" .resultType)))
+        (if is-success
+            (error "Expected a typed hole error, but got a successful rebuild")
+          (let* ((completions (seq-mapcat (lambda (x) (let-alist x .pursIde.completions)) .result))
+                 (record-completions (seq-filter (lambda (x) (let-alist x (s-starts-with? "_." .identifier))) completions))
+                 (ht-completions (seq-map #'ht<-alist record-completions))
+                 (ht-chopped-completions (seq-map (lambda (x)
+                                                    (progn
+                                                      (ht-set x 'identifier (s-chop-prefix "_." (ht-get x 'identifier)))
+                                                      x)) ht-completions))
+                 (completions (seq-map (lambda (x) (psc-ide-annotate-completion '() (ht->alist x))) ht-chopped-completions)))
+            completions))))))
+
+(defun psc-ide-record-completion ()
+  (interactive)
+  (let* ((tmp-file (make-temp-file "psc-ide-add-import"))
+         (filename (buffer-file-name (current-buffer)))
+         (cur-point (point)))
+    (write-region (point-min) (point-max) tmp-file)
+    (with-current-buffer (find-file-noselect tmp-file)
+      (goto-char cur-point)
+      (when (word-at-point)
+          (backward-kill-word 1))
+      (delete-char -1)
+      (insert-string ")")
+      (backward-word)
+      (insert-string "(?lul ")
+      (save-buffer)
+      (kill-buffer))
+    (let ((result (psc-ide-rebuild-hole tmp-file)))
+      (delete-file tmp-file)
+      result)))
 
 (defun psc-ide-display-rebuild-message (type rawMsg)
   "Takes a parsed JSON error/warning and displays it in the
@@ -648,7 +704,7 @@ on whether WARN is true."
 ;;
 ;; Utilities
 
-(add-to-list 'company-backends 'company-psc-ide-backend)
+(add-to-list 'company-backends '(psc-ide-company-record-backend psc-ide-company-backend))
 
 (provide 'psc-ide)
 
