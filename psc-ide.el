@@ -168,14 +168,13 @@ in a buffer"
     (require 'psc-ide-flycheck)
     (psc-ide-flycheck-setup)))
 
-
-(defun psc-ide-company-backend (command &optional arg &rest ignored)
+(defun company-psc-ide-backend (command &optional arg &rest ignored)
   "The psc-ide backend for 'company-mode'."
   (interactive (list 'interactive))
 
   (when (derived-mode-p 'purescript-mode)
     (cl-case command
-      (interactive (company-begin-backend 'psc-ide-company-backend))
+      (interactive (company-begin-backend 'company-psc-ide-backend))
 
       (init (psc-ide-init))
 
@@ -704,7 +703,7 @@ on whether WARN is true."
 ;;
 ;; Utilities
 
-(add-to-list 'company-backends '(psc-ide-company-record-backend psc-ide-company-backend))
+(add-to-list 'company-backends '(psc-ide-company-record-backend company-psc-ide-backend))
 
 (provide 'psc-ide)
 
