@@ -142,6 +142,8 @@ in a buffer"
 ;;
 ;; Interactive.
 
+(defvar psc-ide-buffer-import-list '())
+
 (add-hook 'after-save-hook
           (lambda ()
             (set 'psc-ide-buffer-import-list
@@ -320,7 +322,6 @@ none."
 (defun psc-ide-record-completion ()
   (interactive)
   (let* ((tmp-file (make-temp-file "psc-ide-add-import"))
-         (filename (buffer-file-name (current-buffer)))
          (cur-point (point)))
     (write-region (point-min) (point-max) tmp-file)
     (with-current-buffer (find-file-noselect tmp-file)
@@ -328,9 +329,9 @@ none."
       (when (word-at-point)
           (backward-kill-word 1))
       (delete-char -1)
-      (insert-string ")")
+      (insert ")")
       (backward-word)
-      (insert-string "(?lul ")
+      (insert "(?lul ")
       (save-buffer)
       (kill-buffer))
     (let ((result (psc-ide-rebuild-hole tmp-file)))
@@ -386,10 +387,9 @@ nicely displayed inside a compilation buffer."
 
 (defun psc-ide-add-clause-impl ()
   "Add clause on identifier under cursor"
-  (let ((reg (psc-ide-ident-pos-at-point)))
-    (psc-ide-unwrap-result (psc-ide-send-sync
-                            (psc-ide-command-add-clause
-                             (substring (thing-at-point 'line t) 0 -1) nil)))))
+  (psc-ide-unwrap-result (psc-ide-send-sync
+                          (psc-ide-command-add-clause
+                           (substring (thing-at-point 'line t) 0 -1) nil))))
 
 (defun psc-ide-get-module-name ()
   "Return the qualified name of the module in the current buffer."
@@ -407,8 +407,6 @@ imports to extract the relevant info from the groups.  STRING is for
 use when the search used was with `string-match'."
 
   (let* ((data (match-data))
-         (len (length data))
-         (idx 3)
          result)
     (push `(module . ,(match-string-no-properties 1 string)) result)
     (push `(qualifier . ,(match-string-no-properties 3 string)) result)
@@ -504,7 +502,6 @@ use when the search used was with `string-match'."
 (defun psc-ide-add-import-impl (identifier &optional filters)
   "Invoke the addImport command"
   (let* ((tmp-file (make-temp-file "psc-ide-add-import"))
-         (filename (buffer-file-name (current-buffer)))
          (result (progn
                    (write-region (point-min) (point-max) tmp-file)
                    (psc-ide-unwrap-result
@@ -653,7 +650,7 @@ on whether WARN is true."
              (if (not (zerop (length result)))
                (let-alist (aref result 0)
                  (message (psc-ide-string-fontified
-                           (format "%s.%s ::\n  %s"
+                           (format "%s.%s ∷\n  %s"
                                    .module
                                    .identifier
                                    (if expand .expandedType .type)))))
@@ -703,7 +700,8 @@ on whether WARN is true."
 ;;
 ;; Utilities
 
-(add-to-list 'company-backends '(psc-ide-company-record-backend company-psc-ide-backend))
+(defvar psc-ide-company-backend '(psc-ide-company-record-backend company-psc-ide-backend))
+(add-to-list 'company-backends psc-ide-company-backend)
 
 (provide 'psc-ide)
 
