@@ -630,7 +630,7 @@ on whether WARN is true."
   (format " (%s)" (get-text-property 0 :module s)))
 
 (defun psc-ide-suggest-project-dir ()
-  (if (fboundp 'projectile-project-root)
+  (if (and (fboundp 'projectile-project-root) (projectile-project-p))
       (projectile-project-root)
     (file-name-directory (buffer-file-name))))
 
