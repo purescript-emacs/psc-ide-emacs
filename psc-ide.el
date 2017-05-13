@@ -142,6 +142,8 @@ in a buffer"
 ;;
 ;; Interactive.
 
+(defvar psc-ide-buffer-import-list '())
+
 (add-hook 'after-save-hook
           (lambda ()
             (set 'psc-ide-buffer-import-list
@@ -282,6 +284,60 @@ none."
             (message "OK"))
         (psc-ide-display-rebuild-message "Warning" (aref result 0))))))
 
+(defun psc-ide-is-record-completion ()
+  (save-excursion
+    (when (word-at-point)
+      (backward-word))
+    (when (string-equal (char-to-string (char-before)) ".")
+      (backward-char 1)
+      (s-lowercase? (substring (word-at-point) 0 1)))))
+
+(defun psc-ide-company-record-backend (command &optional arg &rest ignored)
+    "The psc-ide backend for record completions."
+    (interactive (list 'interactive))
+    (when (derived-mode-p 'purescript-mode)
+      (cl-case command
+        (interactive (company-begin-backend 'psc-ide-company-record-backend))
+        (prefix (when (psc-ide-is-record-completion) (cons (or (word-at-point) "") 't)))
+        (candidates (psc-ide-record-completion))
+        (meta (psc-ide-string-fontified (get-text-property 0 :type arg))))))
+
+(defun psc-ide-rebuild-hole (fp)
+  (interactive)
+  (let ((response (psc-ide-send-sync (psc-ide-command-rebuild fp))))
+    (let-alist response
+      (let ((is-success (string= "success" .resultType)))
+        (if is-success
+            (error "Expected a typed hole error, but got a successful rebuild")
+          (let* ((completions (seq-mapcat (lambda (x) (let-alist x .pursIde.completions)) .result))
+                 (record-completions (seq-filter (lambda (x) (let-alist x (s-starts-with? "_." .identifier))) completions))
+                 (ht-completions (seq-map #'ht<-alist record-completions))
+                 (ht-chopped-completions (seq-map (lambda (x)
+                                                    (progn
+                                                      (ht-set x 'identifier (s-chop-prefix "_." (ht-get x 'identifier)))
+                                                      x)) ht-completions))
+                 (completions (seq-map (lambda (x) (psc-ide-annotate-completion '() (ht->alist x))) ht-chopped-completions)))
+            completions))))))
+
+(defun psc-ide-record-completion ()
+  (interactive)
+  (let* ((tmp-file (make-temp-file "psc-ide-add-import"))
+         (cur-point (point)))
+    (write-region (point-min) (point-max) tmp-file)
+    (with-current-buffer (find-file-noselect tmp-file)
+      (goto-char cur-point)
+      (when (word-at-point)
+          (backward-kill-word 1))
+      (delete-char -1)
+      (insert ")")
+      (backward-word)
+      (insert "(?lul ")
+      (save-buffer)
+      (kill-buffer))
+    (let ((result (psc-ide-rebuild-hole tmp-file)))
+      (delete-file tmp-file)
+      result)))
+
 (defun psc-ide-display-rebuild-message (type rawMsg)
   "Takes a parsed JSON error/warning and displays it in the
 rebuild buffer."
@@ -331,10 +387,9 @@ nicely displayed inside a compilation buffer."
 
 (defun psc-ide-add-clause-impl ()
   "Add clause on identifier under cursor"
-  (let ((reg (psc-ide-ident-pos-at-point)))
-    (psc-ide-unwrap-result (psc-ide-send-sync
-                            (psc-ide-command-add-clause
-                             (substring (thing-at-point 'line t) 0 -1) nil)))))
+  (psc-ide-unwrap-result (psc-ide-send-sync
+                          (psc-ide-command-add-clause
+                           (substring (thing-at-point 'line t) 0 -1) nil))))
 
 (defun psc-ide-get-module-name ()
   "Return the qualified name of the module in the current buffer."
@@ -352,8 +407,6 @@ imports to extract the relevant info from the groups.  STRING is for
 use when the search used was with `string-match'."
 
   (let* ((data (match-data))
-         (len (length data))
-         (idx 3)
          result)
     (push `(module . ,(match-string-no-properties 1 string)) result)
     (push `(qualifier . ,(match-string-no-properties 3 string)) result)
@@ -449,7 +502,6 @@ use when the search used was with `string-match'."
 (defun psc-ide-add-import-impl (identifier &optional filters)
   "Invoke the addImport command"
   (let* ((tmp-file (make-temp-file "psc-ide-add-import"))
-         (filename (buffer-file-name (current-buffer)))
          (result (progn
                    (write-region (point-min) (point-max) tmp-file)
                    (psc-ide-unwrap-result
@@ -598,7 +650,7 @@ on whether WARN is true."
              (if (not (zerop (length result)))
                (let-alist (aref result 0)
                  (message (psc-ide-string-fontified
-                           (format "%s.%s ::\n  %s"
+                           (format "%s.%s ∷\n  %s"
                                    .module
                                    .identifier
                                    (if expand .expandedType .type)))))
@@ -648,7 +700,8 @@ on whether WARN is true."
 ;;
 ;; Utilities
 
-(add-to-list 'company-backends 'company-psc-ide-backend)
+(defvar psc-ide-company-backend '(psc-ide-company-record-backend company-psc-ide-backend))
+(add-to-list 'company-backends psc-ide-company-backend)
 
 (provide 'psc-ide)
 
