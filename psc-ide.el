@@ -243,7 +243,7 @@ in a buffer"
     (psc-ide-goto-definition-impl ident)))
 
 (defun psc-ide-case-split (type)
-  "Case Split on identifier under cursor."
+  "Case Split on identifier under cursor while specifying TYPE."
   (interactive "sType: ")
   (let ((new-lines (psc-ide-case-split-impl type)))
     (beginning-of-line) (kill-line) ;; clears the current line
@@ -259,16 +259,19 @@ in a buffer"
 (defun psc-ide-add-import ()
   "Add an import for the symbol under the cursor."
   (interactive)
-  (psc-ide-add-import-impl (psc-ide-ident-at-point)))
+  (-if-let (splitted (psc-ide-split-qualifier (psc-ide-ident-at-point)))
+      (let-alist splitted
+        (psc-ide-add-import-qualified-impl .identifier .qualifier))
+    (psc-ide-add-import-impl (psc-ide-ident-at-point))))
 
 (defun psc-ide-rebuild ()
-  "Rebuild the current module"
+  "Rebuild the current module."
   (interactive)
   (save-buffer)
   (psc-ide-send (psc-ide-command-rebuild) 'psc-ide-rebuild-handler))
 
 (defun psc-ide-rebuild-handler (response)
-  "Accepts a rebuild response and either displays errors/warnings
+  "Accepts a rebuild RESPONSE and either displays errors/warnings
 inside the *psc-ide-rebuild* buffer, or closes it if there were
 none."
   (let ((is-success (string= "success" (cdr (assoc 'resultType response))))
@@ -346,15 +349,11 @@ nicely displayed inside a compilation buffer."
         (buffer-substring-no-properties (match-beginning 1) (match-end 1))))))
 
 (defun psc-ide-extract-import-from-match-data (&optional string)
-
   "Helper function for use when using the `psc-ide-import-regex' to match
 imports to extract the relevant info from the groups.  STRING is for
 use when the search used was with `string-match'."
 
-  (let* ((data (match-data))
-         (len (length data))
-         (idx 3)
-         result)
+  (let (result)
     (push `(module . ,(match-string-no-properties 1 string)) result)
     (push `(qualifier . ,(match-string-no-properties 3 string)) result)
     result))
@@ -447,9 +446,8 @@ use when the search used was with `string-match'."
                        [] (list module-name)))))
 
 (defun psc-ide-add-import-impl (identifier &optional filters)
-  "Invoke the addImport command"
+  "Invoke the addImport command for IDENTIFIER with the given FILTERS."
   (let* ((tmp-file (make-temp-file "psc-ide-add-import"))
-         (filename (buffer-file-name (current-buffer)))
          (result (progn
                    (write-region (point-min) (point-max) tmp-file)
                    (psc-ide-unwrap-result
@@ -468,17 +466,47 @@ use when the search used was with `string-match'."
                (insert-file-contents tmp-file nil nil nil t))))
     (delete-file tmp-file)))
 
+(defun psc-ide-add-import-qualified-impl (identifier qualifier)
+  "Add a qualified import for the given IDENTIFIER and QUALIFIER."
+  (let* ((completions
+          (psc-ide-unwrap-result
+           (psc-ide-send-sync
+            (psc-ide-command-show-type (vector) identifier))))
+         (module
+          (pcase (length completions)
+            (`0 (error "Couldn't find a module for %s" identifier))
+            (`1 (cdr (assoc 'module (aref completions 0))))
+            (_ (completing-read "Which Module: "
+                                (seq-map (lambda (x) (let-alist x .module)) completions))))))
+    (unless (string= (psc-ide-qualifier-for-module module) qualifier)
+      (save-buffer)
+      (psc-ide-send-sync (psc-ide-command-add-qualified-import module qualifier))
+      (revert-buffer nil t))))
+
 (defun psc-ide-company-fetcher (ignored &optional manual)
-  "Grabs the symbol at point at creates an asynchronouse
+  "Grabs the symbol at point at creates an asynchronous
 completer. We ignore the prefix we get from company, because it
 doesn't contain eventual qualifiers."
   (let ((prefix (company-grab-symbol)))
   `(:async . ,(-partial 'psc-ide-complete-async prefix manual))))
 
 (defun psc-ide-complete-async (prefix manual callback)
+  "Sends a completion command to purs ide."
   (let ((command (psc-ide-build-completion-command prefix manual))
         (handler (-partial 'psc-ide-handle-completionresponse callback)))
     (psc-ide-send command handler)))
+
+(defun psc-ide-split-qualifier (s)
+  "Splits S into (qualifier . identifier), or returns nil
+  if there is no qualifier."
+  (let* ((splitted (s-split "\\." s))
+         (qualifier (s-join "." (butlast splitted)))
+         (identifier (-last-item splitted)))
+    (when (and identifier (s-uppercase? (substring qualifier 0 1)))
+      (let (table)
+        (push (cons 'identifier identifier) table)
+        (push (cons 'qualifier qualifier) table)
+        table))))
 
 (defun psc-ide-build-completion-command (search manual)
   "Constructs a completion command from the given SEARCH.
@@ -634,12 +662,12 @@ on whether WARN is true."
       (projectile-project-root)
     (file-name-directory (buffer-file-name))))
 
-(defun psc-ide-string-fontified (str)
-  "Takes a string and returns it with syntax highlighting."
+(defun psc-ide-string-fontified (string)
+  "Take a STRING and return it with syntax highlighting."
   (with-temp-buffer
     (turn-on-purescript-font-lock)
-    (insert str)
-    (font-lock-fontify-buffer)
+    (insert string)
+    (font-lock-ensure)
     (buffer-string)))
 
 (setq company-tooltip-align-annotations t)

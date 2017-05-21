@@ -117,6 +117,17 @@ Evaluates the CALLBACK in the context of the CURRENT buffer that initiated call 
                                   :importCommand "addImport"
                                   :identifier identifier)))))
 
+(defun psc-ide-command-add-qualified-import (modulename qualifier &optional file outfile)
+  (json-encode
+   (list :command "import"
+         :params (list
+                  :file (or file (buffer-file-name))
+                  :outfile (or outfile (buffer-file-name))
+                  :importCommand (list
+                                  :importCommand "addQualifiedImport"
+                                  :module modulename
+                                  :qualifier qualifier)))))
+
 (defun psc-ide-command-rebuild (&optional filepath)
   (json-encode
    (list :command "rebuild"
