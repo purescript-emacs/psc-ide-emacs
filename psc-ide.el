@@ -503,10 +503,8 @@ doesn't contain eventual qualifiers."
          (qualifier (s-join "." (butlast splitted)))
          (identifier (-last-item splitted)))
     (when (and identifier (s-uppercase? (substring qualifier 0 1)))
-      (let (table)
-        (push (cons 'identifier identifier) table)
-        (push (cons 'qualifier qualifier) table)
-        table))))
+      `((identifier . ,identifier)
+        (qualifier . ,qualifier)))))
 
 (defun psc-ide-build-completion-command (search manual)
   "Constructs a completion command from the given SEARCH.
