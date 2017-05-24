@@ -502,7 +502,7 @@ doesn't contain eventual qualifiers."
   (let* ((splitted (s-split "\\." s))
          (qualifier (s-join "." (butlast splitted)))
          (identifier (-last-item splitted)))
-    (when (and identifier (s-uppercase? (substring qualifier 0 1)))
+    (when (and identifier (not (string= "" qualifier)) (s-uppercase? (substring qualifier 0 1)))
       `((identifier . ,identifier)
         (qualifier . ,qualifier)))))
 
