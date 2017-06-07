@@ -1,6 +1,6 @@
 ;;; psc-ide.el --- Minor mode for PureScript's psc-ide tool. -*- lexical-binding: t -*-
 
-;; Copyright (C) 2015 The psc-ide-emacs authors
+;; Copyright (C) 2017 The psc-ide-emacs authors
 
 ;; Author   : Erik Post <erik@shinsetsu.nl>
 ;;            Dmitry Bushenko <d.bushenko@gmail.com>
@@ -62,7 +62,7 @@
   :group 'psc-ide)
 
 (defcustom psc-ide-server-executable "psc-ide-server"
-  "Path to the 'psc-ide-server' executable"
+  "Path to the 'psc-ide-server' executable."
   :group 'psc-ide
   :type 'string)
 
@@ -77,7 +77,7 @@
   :type  'boolean)
 
 (defcustom psc-ide-use-purs t
-  "Whether to use `purs ide' to start psc ide server, if nil fallback to use old psc-ide-server"
+  "Whether to use `purs ide' to start psc ide server, if nil fallback to use old psc-ide-server."
   :group 'psc-ide
   :type 'boolean)
 
@@ -92,14 +92,14 @@
   :type  'sexp)
 
 (defcustom psc-ide-output-directory "output/"
-  "Path to the output directory. Defaults to \"output/\" and
-  should only be changed with .dir-locals.el to accomodate for
-  project specific setups"
+  "Path to the output directory.
+Defaults to \"output/\" and should only be changed with
+.dir-locals.el to accomodate for project specific setups"
   :group 'psc-ide
   :type  'string)
 
 (defcustom psc-ide-debug nil
-  "Whether psc-ide-server should be started with the debug flag"
+  "Whether psc-ide-server should be started with the debug flag."
   :group 'psc-ide
   :type  'boolean)
 
@@ -110,24 +110,22 @@
   :type  'string)
 
 (defcustom psc-ide-add-import-on-completion "t"
-  "Whether to add imports on completion"
+  "Whether to add imports on completion."
   :group 'psc-ide
   :type 'boolean)
 
 (defcustom psc-ide-add-qualification-on-completion "t"
-  "Whether to automatically prepend the qualifier for completions
-that are imported qualified in the current module"
+  "Whether to automatically prepend the qualifier for completions that are imported qualified in the current module."
   :group 'psc-ide
   :type 'boolean)
 
 (defcustom psc-ide-rebuild-on-save nil
-  "Whether to rebuild files on save and display errors/warnings
-in a buffer"
+  "Whether to rebuild files on save and display errors/warnings in a buffer."
   :group 'psc-ide
   :type 'boolean)
 
 (defcustom psc-ide-disable-flycheck nil
-  "Whether to disable flycheck syntax functionality"
+  "Whether to disable flycheck syntax functionality."
   :group 'psc-ide
   :type  'boolean)
 
@@ -149,7 +147,7 @@ in a buffer"
           nil t)
 
 (defun psc-ide-rebuild-on-save-hook()
-  "Rebuilds the current module on safe"
+  "Rebuilds the current module on save."
   (when (eq major-mode 'purescript-mode)
     (psc-ide-rebuild)))
 
@@ -157,6 +155,7 @@ in a buffer"
   (add-hook 'after-save-hook 'psc-ide-rebuild-on-save-hook))
 
 (defun psc-ide-init ()
+  "Initialization for psc-ide-mode."
   (interactive)
   (add-function :before-until (local 'eldoc-documentation-function)
                 #'psc-ide-show-type-eldoc)
@@ -208,7 +207,7 @@ in a buffer"
                                         (list (get-text-property 0 :module arg))))))))))
 
 (defun psc-ide-server-start (dir-name)
-  "Start 'psc-ide-server'."
+  "Start 'psc-ide-server' in DIR-NAME and load all modules."
   (interactive (list (read-directory-name "Project root? "
                                           (psc-ide-suggest-project-dir))))
   (psc-ide-server-start-impl dir-name)
@@ -221,18 +220,18 @@ in a buffer"
   (psc-ide-send-sync psc-ide-command-quit))
 
 (defun psc-ide-load-module (module-name)
-  "Provide module to load"
+  "Load module with MODULE-NAME."
   (interactive (list (read-string "Module: " (psc-ide-get-module-name))))
   (psc-ide-load-module-impl module-name))
 
 (defun psc-ide-load-all ()
-  "Loads all the modules in the current project"
+  "Load all modules in the current project."
   (interactive)
   (psc-ide-send psc-ide-command-load-all
                 (-compose 'message 'psc-ide-unwrap-result)))
 
 (defun psc-ide-show-type (expand)
-  "Show type of the symbol under cursor."
+  "Show type of the symbol under cursor and EXPAND its type synonyms."
   (interactive "P")
   (psc-ide-show-type-impl (psc-ide-ident-at-point) t expand))
 
@@ -271,9 +270,9 @@ in a buffer"
   (psc-ide-send (psc-ide-command-rebuild) 'psc-ide-rebuild-handler))
 
 (defun psc-ide-rebuild-handler (response)
-  "Accepts a rebuild RESPONSE and either displays errors/warnings
-inside the *psc-ide-rebuild* buffer, or closes it if there were
-none."
+  "Handle a rebuild RESPONSE.
+Either displays errors/warnings inside the *psc-ide-rebuild*
+buffer, or closes it if there were none."
   (let ((is-success (string= "success" (cdr (assoc 'resultType response))))
         (result (cdr (assoc 'result response))))
     (if (not is-success)
@@ -285,10 +284,10 @@ none."
             (message "OK"))
         (psc-ide-display-rebuild-message "Warning" (aref result 0))))))
 
-(defun psc-ide-display-rebuild-message (type rawMsg)
-  "Takes a parsed JSON error/warning and displays it in the
-rebuild buffer."
-  (let ((msg (concat type ": " (psc-ide-pretty-json-error rawMsg))))
+(defun psc-ide-display-rebuild-message (error-type raw-message)
+  "Take a parsed JSON error/warning and displays it in the rebuild buffer.
+ERROR-TYPE is either \"error\" or \"warning\" and gets displayed with the RAW-MESSAGE."
+  (let ((msg (concat error-type ": " (psc-ide-pretty-json-error raw-message))))
     (progn
       (with-current-buffer (get-buffer-create "*psc-ide-rebuild*")
         (compilation-mode)
@@ -299,31 +298,26 @@ rebuild buffer."
       (display-buffer "*psc-ide-rebuild*")
       (set-window-point (get-buffer-window "*psc-ide-rebuild*") (point-min)))))
 
-(defun psc-ide-pretty-json-error (err)
-  "Formats a parsed JSON error/warning into a format that can be
-nicely displayed inside a compilation buffer."
-  (let ((err-message (cdr (assoc 'message err)))
-        (err-filename (cdr (assoc 'filename err)))
-        (err-position (cdr (assoc 'position err))))
-    (if (not err-position)
-        err-message
-      (let ((err-column (cdr (assoc 'startColumn err-position)))
-            (err-line (cdr (assoc 'startLine err-position))))
-        (concat err-filename
-                ":" (number-to-string err-line)
-                ":" (number-to-string err-column)
-                ":" "\n" err-message)))))
+(defun psc-ide-pretty-json-error (purs-error)
+  "Formats a parsed PURS-ERROR for display inside a compilation buffer."
+  (let-alist purs-error
+    (if (not .position)
+        .message
+      (concat .filename
+              ":" (number-to-string .position.startLine)
+              ":" (number-to-string .position.startColumn)
+              ":" "\n" .message))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Non-interactive.
 
 (defun psc-ide-show-type-eldoc ()
-  "Show type of the symbol under cursor, but be quiet about failures"
+  "Show type of the symbol under cursor, but be quiet about failures."
   (psc-ide-show-type-impl (psc-ide-ident-at-point)))
 
 (defun psc-ide-case-split-impl (type)
-  "Case Split on identifier under cursor"
+  "Case Split on identifier of TYPE under cursor."
   (let ((reg (psc-ide-ident-pos-at-point)))
     (psc-ide-unwrap-result (psc-ide-send-sync
                             (psc-ide-command-case-split
@@ -333,11 +327,10 @@ nicely displayed inside a compilation buffer."
                              type)))))
 
 (defun psc-ide-add-clause-impl ()
-  "Add clause on identifier under cursor"
-  (let ((reg (psc-ide-ident-pos-at-point)))
-    (psc-ide-unwrap-result (psc-ide-send-sync
-                            (psc-ide-command-add-clause
-                             (substring (thing-at-point 'line t) 0 -1) nil)))))
+  "Add clause on identifier under cursor."
+  (psc-ide-unwrap-result (psc-ide-send-sync
+                          (psc-ide-command-add-clause
+                           (substring (thing-at-point 'line t) 0 -1) nil))))
 
 (defun psc-ide-get-module-name ()
   "Return the qualified name of the module in the current buffer."
@@ -349,10 +342,8 @@ nicely displayed inside a compilation buffer."
         (buffer-substring-no-properties (match-beginning 1) (match-end 1))))))
 
 (defun psc-ide-extract-import-from-match-data (&optional string)
-  "Helper function for use when using the `psc-ide-import-regex' to match
-imports to extract the relevant info from the groups.  STRING is for
-use when the search used was with `string-match'."
-
+  "Helper to extract the relevant info when using the `psc-ide-import-regex'.
+STRING is for use when the search used was with `string-match'."
   (let (result)
     (push `(module . ,(match-string-no-properties 1 string)) result)
     (push `(qualifier . ,(match-string-no-properties 3 string)) result)
@@ -382,14 +373,15 @@ use when the search used was with `string-match'."
                 (-compose 'message 'psc-ide-unwrap-result)))
 
 (defun psc-ide-server-start-impl (dir-name)
-  "Start psc-ide server."
+  "Start psc-ide server in DIR-NAME."
   (apply 'start-process `("*psc-ide-server*" "*psc-ide-server*"
                           ,@(psc-ide-server-command dir-name))))
 
 (defun psc-ide-server-command (dir-name)
-  "Tries to find the psc-ide executable and builds up the
-  command by appending eventual options. Returns a list that can
-  be expanded and passed to start-process"
+  "Build a shell command to start `purs ide` in directory DIR-NAME.
+Tries to find the purs executable and builds up the command by
+appending eventual options. Returns a list that can be expanded
+and passed to `start-process`."
   (let* ((executable-name (psc-ide-executable-name))
          (npm-bin-path (if psc-ide-use-npm-bin
                            (psc-ide-npm-bin-server-executable executable-name)
@@ -411,36 +403,24 @@ use when the search used was with `string-match'."
                            " or set the psc-ide-use-npm-bin variable to"
                            " true, or put the executable on your path."))))))
 (defun psc-ide-executable-name ()
-  "Find ide executable name"
+  "Find ide executable name."
   (if psc-ide-use-purs
       psc-ide-purs-executable
     psc-ide-server-executable))
 
 (defun psc-ide-npm-bin-server-executable (cmd)
-  "Find psc-ide server binary of current project by invoking `npm bin`"
+  "Find psc-ide server binary CMD of current project by invoking `npm bin`."
   (let* ((npm-bin (s-trim-right (shell-command-to-string "npm bin")))
          (server (expand-file-name cmd npm-bin)))
     (if (and server (file-executable-p server)) server nil)))
 
 (defun psc-ide-server-version ()
-  "Returns the version of the found psc-ide-server executable"
+  "Return the version of the found psc-ide-server executable."
   (let ((path (executable-find (psc-ide-executable-name))))
     (s-chomp (shell-command-to-string (s-concat path " --version")))))
 
-(defun psc-ide--version-gte (version1 version2)
-  "Determines whether VERSION1 is greater then or equal to VERSION2"
-  (let* ((vs (-zip-fill 0
-                        (-map 'string-to-number (s-split "\\." version1))
-                        (-map 'string-to-number (s-split "\\." version2))))
-         ;; drop all the prefix version numbers that are equal
-         (v (car (--drop-while (= (cdr it) (car it)) vs))))
-    ;; if v is nil, the two versions were completely equal
-    (if v
-        (>= (car v) (cdr v))
-      t)))
-
 (defun psc-ide-load-module-impl (module-name)
-  "Load a PureScript module and its dependencies."
+  "Load a PureScript module with MODULE-NAME and its dependencies."
   (psc-ide-unwrap-result
    (psc-ide-send-sync (psc-ide-command-load
                        [] (list module-name)))))
@@ -484,21 +464,23 @@ use when the search used was with `string-match'."
       (revert-buffer nil t))))
 
 (defun psc-ide-company-fetcher (ignored &optional manual)
-  "Grabs the symbol at point at creates an asynchronous
+  "Create an asynchronous company fetcher.
+Grabs the symbol at point at creates an asynchronous
 completer. We ignore the prefix we get from company, because it
 doesn't contain eventual qualifiers."
   (let ((prefix (company-grab-symbol)))
   `(:async . ,(-partial 'psc-ide-complete-async prefix manual))))
 
 (defun psc-ide-complete-async (prefix manual callback)
-  "Sends a completion command to purs ide."
+  "Sends a completion command for PREFIX to purs ide.
+If MANUAL is set, do not filter with the currently imported modules.
+CALLBACK receives the asynchronously retrieved completions."
   (let ((command (psc-ide-build-completion-command prefix manual))
         (handler (-partial 'psc-ide-handle-completionresponse callback)))
     (psc-ide-send command handler)))
 
 (defun psc-ide-split-qualifier (s)
-  "Splits S into (qualifier . identifier), or returns nil
-  if there is no qualifier."
+  "Split S into (qualifier . identifier), or return nil if there is no qualifier."
   (let* ((splitted (s-split "\\." s))
          (qualifier (s-join "." (butlast splitted)))
          (identifier (-last-item splitted)))
@@ -507,7 +489,10 @@ doesn't contain eventual qualifiers."
         (qualifier . ,qualifier)))))
 
 (defun psc-ide-build-completion-command (search manual)
-  "Constructs a completion command from the given SEARCH.
+  "Construct a completion command from the given SEARCH.
+
+If MANUAL is set, ignore the currently imported modules.
+
 The cases we have to cover:
 1. List.fil      <- filter by prefix and List module
 2. fil| + manual <- don't filter at all
@@ -532,7 +517,7 @@ The cases we have to cover:
          (psc-ide-get-module-name))))))
 
 (defun psc-ide-qualified-completion-command (prefix qualifier)
-  "Builds a completion command for a PREFIX with QUALIFIERF"
+  "Build a completion command for a PREFIX with QUALIFIER."
   (let ((modules (psc-ide-modules-for-qualifier qualifier)))
     (psc-ide-command-complete
      (vector (psc-ide-filter-prefix prefix)
@@ -541,21 +526,21 @@ The cases we have to cover:
      (psc-ide-get-module-name))))
 
 (defun psc-ide-all-imported-modules ()
-  "Retrieves all imported modules for a buffer"
+  "Retrieve all imported modules for a buffer."
   (-map (lambda (import) (cdr (assoc 'module import)))
         (psc-ide-parse-imports-in-buffer)))
 
 (defun psc-ide-modules-for-qualifier (qualifier)
-  "Searches the current module's imports for modules that are
-  qualified as QUALIFIER"
+  "Search the current module's imports for modules that are qualified as QUALIFIER."
   (let ((imports (psc-ide-parse-imports-in-buffer)))
     (-keep (lambda (import)
              (when (equal qualifier (cdr (assoc 'qualifier import)))
                (cdr (assoc 'module import)))) imports)))
 
 (defun psc-ide-qualifier-for-module (module &optional parsed-imports)
-  "Searches the current module's imports for MODULE and returns
-its qualifier. Returns nil if the module is not imported qualified"
+  "Search the current module's imports for MODULE and return its qualifier.
+Return nil if the module is not imported qualified. Does not
+reparse if PARSED-IMPORTS is passed."
   (let ((imports (or parsed-imports (psc-ide-parse-imports-in-buffer))))
     (-first-item
      (-keep (lambda (import)
@@ -563,7 +548,8 @@ its qualifier. Returns nil if the module is not imported qualified"
                 (cdr (assoc 'qualifier import)))) imports))))
 
 (defun psc-ide-handle-completionresponse (callback response)
-  "Accepts a callback and a completion response from psc-ide,
+  "Handle a completion response from psc-ide.
+Accepts a CALLBACK and a completion RESPONSE from psc-ide,
 processes the response into a format suitable for company and
 passes it into the callback"
   (let* ((result (psc-ide-unwrap-result response))
@@ -571,8 +557,8 @@ passes it into the callback"
     (funcall callback completions)))
 
 (defun psc-ide-annotate-completion (parsed-imports completion)
-  "Turns a completion from psc-ide into a string with
-  text-properties, which carry additional information"
+  "Annotate a completion from psc-ide with `text-properties'.
+PARSED-IMPORTS are used to annotate the COMPLETION with qualifiers."
   (let-alist completion
     (let* ((qualifier (psc-ide-qualifier-for-module .module parsed-imports))
            (identifier  (if (and psc-ide-add-qualification-on-completion
@@ -615,9 +601,9 @@ passes it into the callback"
           (message (format "No position information for %s" search)))))))
 
 (defun psc-ide-show-type-impl (search &optional warn expand)
-  "Prints a message that describes the type of SEARCH.
+  "Print a message that describes the type of SEARCH.
 If the type of SEARCH is not found it prints a warning depending
-on whether WARN is true."
+on whether WARN is true. Optionally EXPANDs type synonyms."
   (let ((handler
          (lambda (resp)
            (let ((result (psc-ide-unwrap-result resp)))
@@ -645,7 +631,7 @@ on whether WARN is true."
      (psc-ide-get-module-name)))))
 
 (defun psc-ide-qualified-type-command (ident qualifier)
-  "Builds a type command for an IDENT with QUALIFIER"
+  "Build a type command for an IDENT with QUALIFIER."
   (let ((modules (psc-ide-modules-for-qualifier qualifier)))
         (psc-ide-command-show-type
          (vector (psc-ide-filter-modules (vconcat modules)))
@@ -653,9 +639,11 @@ on whether WARN is true."
          (psc-ide-get-module-name))))
 
 (defun psc-ide-annotation (s)
+  "Extract the module annotation from S."
   (format " (%s)" (get-text-property 0 :module s)))
 
 (defun psc-ide-suggest-project-dir ()
+  "Suggest a project directory to start the ide server in."
   (if (and (fboundp 'projectile-project-root) (projectile-project-p))
       (projectile-project-root)
     (file-name-directory (buffer-file-name))))
