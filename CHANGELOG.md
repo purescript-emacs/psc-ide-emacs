@@ -1,5 +1,9 @@
 # CHANGELOG
 
+
+## 2017-04-20
+- Fixes a bug where large responses would cause psc-ide-send-sync to fail
+
 ## 2017-04-20
 - Displays completions with their already imported qualifiers. This can be toggled
 off with `(setq psc-ide-add-qualification-on-completion nil)`.
