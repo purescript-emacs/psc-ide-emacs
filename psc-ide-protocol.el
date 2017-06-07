@@ -5,7 +5,7 @@
 
 (defun psc-ide-send-sync (cmd)
   (with-temp-buffer
-    (condition-case nil
+    (condition-case err
         (let ((proc (make-network-process
                      :name "psc-ide-server"
                      :buffer (buffer-name (current-buffer))
@@ -13,9 +13,15 @@
                      :host "localhost"
                      :service psc-ide-port)))
           (process-send-string proc (s-prepend cmd "\n"))
-          ;; Wait for the process in a blocking manner for a maximum of 2
-          ;; seconds
-          (accept-process-output proc 2)
+
+          (let ((timed-out nil))
+            ;; As long as the process is running and we're not timed out
+            (while (not (or (string= (process-status proc) "closed") timed-out))
+              ;; Wait for the process in a blocking manner for a maximum of 2
+              ;; seconds, and if we don't receive any output, set timed-out
+              (unless (accept-process-output proc 2)
+                (setq timed-out t))))
+
           (delete-process proc)
           (json-read-from-string (-first-item (s-lines (buffer-string)))))
       (error
