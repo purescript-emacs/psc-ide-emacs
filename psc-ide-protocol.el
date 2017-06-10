@@ -87,13 +87,14 @@ Evaluates the CALLBACK in the context of the CURRENT buffer that initiated call 
                             ,@(when search (list :search search))
                             ,@(when module (list :currentModule module)))))))
 
-(defun psc-ide-command-complete (filters &optional matcher module)
+(defun psc-ide-command-complete (filters &optional matcher module options)
   (json-encode
    (list :command "complete"
          :params (-filter #'identity
                           `(,@(when filters (list :filters filters))
                             ,@(when matcher (list :matcher matcher))
-                            ,@(when module (list :currentModule module)))))))
+                            ,@(when module (list :currentModule module))
+                            ,@(when options (list :options options)))))))
 
 (defun psc-ide-command-case-split (line begin end type)
   (json-encode
@@ -151,7 +152,6 @@ Evaluates the CALLBACK in the context of the CURRENT buffer that initiated call 
 ;;
 ;; Protocol utilities.
 
-
 (defun psc-ide-generic-filter (name params)
    (list :filter name
          :params params))
@@ -179,6 +179,11 @@ Evaluates the CALLBACK in the context of the CURRENT buffer that initiated call 
 (defun psc-ide-matcher-distance (match-str max-dist)
   (psc-ide-generic-matcher "distance" (list :search match-str
                                             :maxDist max-dist)))
+
+(defun psc-ide-completion-options (&optional max-results group-reexports)
+  (-filter #'identity
+           `(,@(when max-results (list :maxResults max-results))
+             ,@(when group-reexports (list :groupReexports group-reexports)))))
 
 (defun psc-ide-unwrap-result (res)
   "Unwraps the result from psc-ide and in case of an error throws it"
