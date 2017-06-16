@@ -20,7 +20,6 @@
 
    #+BEGIN_SRC elisp
 
-   ;; specify path to the 'psc-ide' executable
    (require 'psc-ide)
 
    (add-hook 'purescript-mode-hook
@@ -31,8 +30,8 @@
        (turn-on-purescript-indentation)))
    #+END_SRC
 
-   If you want to use the psc-ide server that is relative to your `npm bin`
-   directory, e.g. `./node_modules/.bin/purs`, add this line to your
+   If you want to use the psc-ide server that is relative to your ~npm bin~
+   directory, e.g. ~./node_modules/.bin/purs~, add this line to your
    config:
 
    #+BEGIN_SRC elisp
