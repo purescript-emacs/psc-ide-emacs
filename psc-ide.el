@@ -201,7 +201,9 @@ Defaults to \"output/\" and should only be changed with
                 ;; Don't add an import when the option to do so is disabled
                 (not psc-ide-add-import-on-completion)
                 ;; or when a qualified identifier was completed
-                (or (get-text-property 0 :qualifier arg) (s-contains-p "." (company-grab-symbol))))
+                (or (get-text-property 0 :qualifier arg) (s-contains-p "." (company-grab-symbol)))
+                ;; Don't attempt to import Prim members
+                (string= (get-text-property 0 :module arg) "Prim"))
          (psc-ide-add-import-impl arg (vector
                                        (psc-ide-filter-modules
                                         (list (get-text-property 0 :module arg))))))))))
@@ -512,7 +514,7 @@ The cases we have to cover:
         ;; 3. fil| <- filter by prefix and imported modules"
         (psc-ide-command-complete
          (vector (psc-ide-filter-prefix prefix)
-                 (psc-ide-filter-modules (psc-ide-all-imported-modules)))
+                 (psc-ide-filter-modules (cons "Prim" (psc-ide-all-imported-modules))))
          nil
          (psc-ide-get-module-name))))))
 
@@ -626,7 +628,7 @@ on whether WARN is true. Optionally EXPANDs type synonyms."
       (psc-ide-qualified-type-command ident qualifier)
     (psc-ide-command-show-type
      (vector (psc-ide-filter-modules
-              (psc-ide-all-imported-modules)))
+              (cons "Prim" (psc-ide-all-imported-modules))))
      ident
      (psc-ide-get-module-name)))))
 
