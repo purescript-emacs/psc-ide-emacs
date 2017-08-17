@@ -1,6 +1,8 @@
 ;;; psc-ide.el --- Minor mode for PureScript's psc-ide tool. -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2017 The psc-ide-emacs authors
+;; License: GNU General Public License version 3, or (at your option) any later version
+
 
 ;; Author   : Erik Post <erik@shinsetsu.nl>
 ;;            Dmitry Bushenko <d.bushenko@gmail.com>
