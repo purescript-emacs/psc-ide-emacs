@@ -1,4 +1,5 @@
 ;;; -*- lexical-binding: t -*-
+;; License: GNU General Public License version 3, or (at your option) any later version
 (require 'json)
 (require 'dash-functional)
 (require 's)

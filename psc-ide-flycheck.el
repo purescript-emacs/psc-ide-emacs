@@ -1,6 +1,7 @@
 ;;; psc-ide-flycheck.el --- Flycheck support for the purescript language -*- lexical-binding: t -*-
 
 ;; Copyright (c) 2015 The psc-ide-emacs authors
+;; License: GNU General Public License version 3, or (at your option) any later version
 
 ;; Author: Brian Sermons
 ;; URL: https://github.com/epost/psc-ide-emacs

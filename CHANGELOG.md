@@ -1,5 +1,7 @@
 # CHANGELOG
 
+## 2017-08-17
+- Added a LICENSE file and the appropriate headers
 
 ## 2017-04-20
 - Fixes a bug where large responses would cause psc-ide-send-sync to fail

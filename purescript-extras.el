@@ -1,8 +1,7 @@
-;; Some extras
+;; License: GNU General Public License version 3, or (at your option) any later version
 
 (require 'compile)
 (require 'purescript-mode) ;; needed for 'purescript-ident-at-point'
-
 
 (add-hook 'purescript-mode-hook
           (lambda ()
