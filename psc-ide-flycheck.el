@@ -124,7 +124,7 @@ CALLBACK is the status callback passed by flycheck."
 
   (let ((temp-file (flycheck-save-buffer-to-temp #'flycheck-temp-file-system)))
     (psc-ide-flycheck-copy-related-files (buffer-file-name) temp-file)
-    (psc-ide-send (psc-ide-command-rebuild temp-file)
+    (psc-ide-send (psc-ide-command-rebuild temp-file (buffer-file-name))
                   (lambda (result)
                     (condition-case err
                         (progn
