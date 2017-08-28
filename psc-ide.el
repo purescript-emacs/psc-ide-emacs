@@ -629,7 +629,7 @@ on whether WARN is true. Optionally EXPANDs type synonyms."
              (if (not (zerop (length result)))
                (let-alist (aref result 0)
                  (message (psc-ide-string-fontified
-                           (format "%s.%s ::\n  %s"
+                           (format "%s.%s ∷\n  %s"
                                    .module
                                    .identifier
                                    (if expand .expandedType .type)))))
