@@ -21,7 +21,7 @@ May return a qualified name."
 
     (let ((case-fold-search nil))
       (cl-multiple-value-bind (start end)
-          (if (looking-at "\\s_")
+          (if (looking-at "\\s_|\.")
               (list (progn (skip-syntax-backward "_") (point))
                     (progn (skip-syntax-forward "_") (point)))
             (list
