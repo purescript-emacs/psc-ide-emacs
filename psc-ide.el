@@ -599,6 +599,11 @@ PARSED-IMPORTS are used to annotate the COMPLETION with qualifiers."
                   (require 'etags)
                   (ring-insert find-tag-marker-ring (point-marker))))
               (find-file (expand-file-name file))
+	      (unless (boundp 'projectile-project-root)
+		(let ((dependency-root
+		       (concat (projectile-project-root) "bower_components")))
+		  (unless (string-prefix-p dependency-root (buffer-file-name))
+		    (toggle-read-only))))
               (goto-char (point-min))
               (forward-line (1- line))
               (forward-char (1- column)))
