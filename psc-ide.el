@@ -131,6 +131,11 @@ Defaults to \"output/\" and should only be changed with
   :group 'psc-ide
   :type  'boolean)
 
+(defcustom psc-ide-server-extra-args nil
+  "Extra arguments to pass to the purs ide executable."
+  :group 'psc-ide
+  :type '(repeat string))
+
 (defconst psc-ide-import-regex
   (rx (and line-start "import" (1+ space)
            (group (and (1+ (any word "."))))
@@ -139,7 +144,7 @@ Defaults to \"output/\" and should only be changed with
            (opt (1+ space) "as" (1+ space) (group (and (1+ word)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
+
 ;; Interactive.
 
 (add-hook 'after-save-hook
@@ -400,7 +405,10 @@ and passed to `start-process`."
                                               '("--log-level" "debug")
                                             '("--debug")))))
     (if path
-        (remove nil `(,@cmd "-p" ,port "-d" ,directory "--output-directory" ,psc-ide-output-directory ,@debug-flags ,@psc-ide-source-globs))
+        (remove nil `(,@cmd "-p" ,port "-d" ,directory
+                            "--output-directory" ,psc-ide-output-directory
+                            ,@debug-flags ,@psc-ide-server-extra-args
+                            ,@psc-ide-source-globs))
       (error (s-join " " '("Couldn't locate psc ide executable. You"
                            "could either customize the psc-ide-purs-executable"
                            " or psc-ide-server-executable if psc-ide-use-purs is nil,"
