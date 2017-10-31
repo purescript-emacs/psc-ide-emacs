@@ -103,7 +103,7 @@
           (flycheck-buffer)))
     (message "No suggestion available")))
 
-(define-key purescript-mode-map (kbd "C-c M-s")
+(define-key psc-ide-mode-map (kbd "C-c M-s")
   'psc-ide-flycheck-insert-suggestion)
 
 (defun psc-ide-flycheck-copy-related-files (original temp-file)
