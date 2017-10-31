@@ -654,11 +654,13 @@ on whether WARN is true. Optionally EXPANDs type synonyms."
 
 (defun psc-ide-string-fontified (string)
   "Take a STRING and return it with syntax highlighting."
-  (with-temp-buffer
-    (turn-on-purescript-font-lock)
-    (insert string)
-    (font-lock-ensure)
-    (buffer-string)))
+  (if (fboundp 'turn-on-purescript-font-lock)
+      (with-temp-buffer
+        (turn-on-purescript-font-lock)
+        (insert string)
+        (font-lock-ensure)
+        (buffer-string))
+    string))
 
 (setq company-tooltip-align-annotations t)
 
