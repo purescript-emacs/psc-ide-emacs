@@ -131,6 +131,11 @@ Defaults to \"output/\" and should only be changed with
   :group 'psc-ide
   :type  'boolean)
 
+(defcustom psc-ide-editor-mode nil
+  "Whether to only reload files when the editor initiates rebuilds."
+  :group 'psc-ide
+  :type 'boolean)
+
 (defcustom psc-ide-server-extra-args nil
   "Extra arguments to pass to the purs ide executable."
   :group 'psc-ide
@@ -403,10 +408,12 @@ and passed to `start-process`."
          (directory (expand-file-name dir-name))
          (debug-flags (when psc-ide-debug (if psc-ide-use-purs
                                               '("--log-level" "debug")
-                                            '("--debug")))))
+                                            '("--debug"))))
+         (editor-mode (when psc-ide-editor-mode '("--editor-mode"))))
     (if path
         (remove nil `(,@cmd "-p" ,port "-d" ,directory
                             "--output-directory" ,psc-ide-output-directory
+                            ,@editor-mode
                             ,@debug-flags ,@psc-ide-server-extra-args
                             ,@psc-ide-source-globs))
       (error (s-join " " '("Couldn't locate psc ide executable. You"
@@ -622,7 +629,7 @@ on whether WARN is true. Optionally EXPANDs type synonyms."
              (if (not (zerop (length result)))
                (let-alist (aref result 0)
                  (message (psc-ide-string-fontified
-                           (format "%s.%s ::\n  %s"
+                           (format "%s.%s ∷\n  %s"
                                    .module
                                    .identifier
                                    (if expand .expandedType .type)))))

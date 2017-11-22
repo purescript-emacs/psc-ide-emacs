@@ -136,11 +136,12 @@ Evaluates the CALLBACK in the context of the CURRENT buffer that initiated call 
                                   :module modulename
                                   :qualifier qualifier)))))
 
-(defun psc-ide-command-rebuild (&optional filepath)
+(defun psc-ide-command-rebuild (&optional filepath actualFile)
   (json-encode
    (list :command "rebuild"
-         :params (list
-                  :file (or filepath (buffer-file-name (current-buffer)))))))
+         :params (-filter #'identity
+                          `(,@(list :file (or filepath (buffer-file-name)))
+                            ,@(when actualFile (list :actualFile actualFile)))))))
 
 (defun psc-ide-command-list-imports (&optional filepath)
   (json-encode
