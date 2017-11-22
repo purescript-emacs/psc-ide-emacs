@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2017-11-22 Displays docstrings with company
+You can bring up the documentation for the current completion with C-h during
+completion
+
 ## 2017-11-22 Adds `psc-ide-editor-mode` variable
 This sets the --editor-mode flag on the server executable if set to true. It
 defaults to false for backwards compatibility, but will default to true in a

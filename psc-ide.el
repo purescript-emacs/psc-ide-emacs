@@ -202,6 +202,8 @@ Defaults to \"output/\" and should only be changed with
 
       (candidates (psc-ide-company-fetcher arg company--manual-action))
 
+      (doc-buffer (company-doc-buffer (get-text-property 0 :documentation arg)))
+
       (sorted t)
 
       (annotation (psc-ide-annotation arg))
@@ -590,7 +592,8 @@ PARSED-IMPORTS are used to annotate the COMPLETION with qualifiers."
 
       (add-text-properties 0 1 (list :type .type
                                      :module .module
-                                     :qualifier qualifier) identifier)
+                                     :qualifier qualifier
+                                     :documentation .documentation) identifier)
       ;; add-text-properties is sideeffecting and doesn't return the modified
       ;; string, so we need to explicitly return the identifier from here
       identifier)))
