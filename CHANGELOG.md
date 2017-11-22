@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 2017-11-22 Adds `psc-ide-editor-mode` variable
+This sets the --editor-mode flag on the server executable if set to true. It
+defaults to false for backwards compatibility, but will default to true in a
+while
+
 ## 2017-08-17
 - Added a LICENSE file and the appropriate headers
 
