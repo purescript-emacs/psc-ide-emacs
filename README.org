@@ -91,7 +91,7 @@
     [[http://i.imgur.com/VBXDvPg.gif]]
 
 *** Add an import on completion (turned on by default)
-    Can be turned of with:
+    Can be turned off with:
     #+BEGIN_SRC elisp
     (customize-set-variable 'psc-ide-add-import-on-completion nil)
     #+END_SRC
