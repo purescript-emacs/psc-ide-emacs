@@ -649,7 +649,7 @@ on whether WARN is true. Optionally EXPANDs type synonyms."
     (psc-ide-command-show-type
      (vector (psc-ide-filter-modules
               (cons "Prim" (psc-ide-all-imported-modules))))
-     ident
+     search
      (psc-ide-get-module-name)))))
 
 (defun psc-ide-qualified-type-command (ident qualifier)
