@@ -1,5 +1,7 @@
 # CHANGELOG
 
+## 2018-01-01 Fix adding imports for symbols
+
 ## 2017-11-22 Displays docstrings with company
 You can bring up the documentation for the current completion with C-h during
 completion
