@@ -21,13 +21,16 @@ May return a qualified name."
 
     (let ((case-fold-search nil))
       (cl-multiple-value-bind (start end)
-          (if (looking-at "\\s_|\.")
-              (list (progn (skip-syntax-backward "_") (point))
-                    (progn (skip-syntax-forward "_") (point)))
-            (list
-             (progn (skip-syntax-backward "w'")
-                    (skip-syntax-forward "'") (point))
-             (progn (skip-syntax-forward "w'") (point))))
+          (if (looking-at "\\.")
+              (list (progn (skip-syntax-backward "w_") (point))
+                    (progn (skip-syntax-forward "w_") (point)))
+            (if (looking-at "\\s_")
+                (list (progn (skip-syntax-backward "_") (point))
+                      (progn (skip-syntax-forward "_") (point)))
+              (list
+               (progn (skip-syntax-backward "w'")
+                      (skip-syntax-forward "'") (point))
+               (progn (skip-syntax-forward "w'") (point)))))
         ;; If we're looking at a module ID that qualifies further IDs, add
         ;; those IDs.
         (goto-char start)
