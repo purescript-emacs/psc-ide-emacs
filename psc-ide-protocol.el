@@ -150,6 +150,14 @@ Evaluates the CALLBACK in the context of the CURRENT buffer that initiated call 
                   :type "import"
                   :file (or filepath (buffer-file-name (current-buffer)))))))
 
+(defun psc-ide-command-usages (module namespace identifier)
+  (json-encode
+   (list :command "usages"
+         :params (list
+                  :module module
+                  :namespace namespace
+                  :identifier identifier))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Protocol utilities.
