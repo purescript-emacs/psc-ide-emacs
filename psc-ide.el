@@ -88,7 +88,7 @@
   :group 'psc-ide
   :type  'integer)
 
-(defcustom psc-ide-source-globs '("src/**/*.purs" "bower_components/purescript-*/src/**/*.purs")
+(defcustom psc-ide-source-globs '("src/**/*.purs" "bower_components/purescript-*/src/**/*.purs" ".psc-package/**/src/**/*.purs")
   "The source globs for your PureScript source files."
   :group 'psc-ide
   :type  'sexp)
