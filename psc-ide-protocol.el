@@ -11,7 +11,7 @@
                      :name "psc-ide-server"
                      :buffer (buffer-name (current-buffer))
                      :family 'ipv4
-                     :host "localhost"
+                     :host psc-ide-host
                      :service psc-ide-port)))
           (process-send-string proc (s-prepend cmd "\n"))
 
@@ -38,7 +38,7 @@
                      :name "psc-ide-server"
                      :buffer buffer
                      :family 'ipv4
-                     :host "localhost"
+                     :host psc-ide-host
                      :service psc-ide-port
                      :sentinel (-partial 'wrap-psc-ide-callback callback buffer (current-buffer)))))
           (process-send-string proc (s-prepend cmd "\n")))

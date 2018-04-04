@@ -88,6 +88,11 @@
   :group 'psc-ide
   :type  'integer)
 
+(defcustom psc-ide-host "localhost"
+  "The host that psc-ide-server uses."
+  :group 'psc-ide
+  :type 'string)
+
 (defcustom psc-ide-source-globs '("src/**/*.purs" "bower_components/purescript-*/src/**/*.purs")
   "The source globs for your PureScript source files."
   :group 'psc-ide
