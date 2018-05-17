@@ -621,11 +621,20 @@ PARSED-IMPORTS are used to annotate the COMPLETION with qualifiers."
                 (with-no-warnings
                   (require 'etags)
                   (ring-insert find-tag-marker-ring (point-marker))))
-              (find-file (expand-file-name file))
+              (find-file (psc-ide-expand-file-name file))
               (goto-char (point-min))
               (forward-line (1- line))
               (forward-char (1- column)))
           (message (format "No position information for %s" search)))))))
+
+(defun psc-ide-expand-file-name (file)
+  "Expands a FILE name to be relative to the ide servers cwd.
+Is a no-op if the path is absolute"
+  (if (file-name-absolute-p file)
+      file
+    (expand-file-name
+     file
+     (psc-ide-unwrap-result (psc-ide-send-sync psc-ide-command-cwd)))))
 
 (defun psc-ide-show-type-impl (search &optional warn expand)
   "Print a message that describes the type of SEARCH.
