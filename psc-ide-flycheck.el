@@ -53,17 +53,14 @@
                       (put-text-property 0 1 :endColumn (cdr (assoc 'endColumn replacePos)) .errorCode)
 
                       (push
-                       (flycheck-fix-error-filename
-                        (flycheck-error-new-at
-                         .position.startLine
-                         .position.startColumn
-                         resultType
-                         .message
-                         :id .errorCode
-                         :checker checker
-                         :filename .filename)
-                        flycheck-temporaries
-                        nil)
+                       (flycheck-error-new-at
+                        .position.startLine
+                        .position.startColumn
+                        resultType
+                        .message
+                        :id .errorCode
+                        :checker checker
+                        :filename .filename)
                        errors)))))
               .result)
       errors)))
