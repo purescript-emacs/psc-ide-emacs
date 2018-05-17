@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## 2018-05-17 Don't try to fix up temporary paths for flycheck (there shouldn't be any in the compiler output)
+## 2018-05-17 Expand paths relative to the ide servers directory for go-to-definition
+
 ## 2018-01-01 Fix adding imports for symbols
 
 ## 2017-11-22 Displays docstrings with company
