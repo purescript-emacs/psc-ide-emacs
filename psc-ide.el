@@ -29,6 +29,7 @@
 (require 'dash)
 (require 'dash-functional)
 (require 's)
+(require 'xref)
 (require 'psc-ide-backported)
 (require 'psc-ide-protocol)
 
@@ -514,6 +515,20 @@ CALLBACK receives the asynchronously retrieved completions."
       `((identifier . ,identifier)
         (qualifier . ,qualifier)))))
 
+(defun psc-ide-find-usages (symbol)
+  (let* ((declaration (elt (psc-ide-unwrap-result
+                            (psc-ide-send-sync (psc-ide-build-completion-command symbol nil)))
+                           0)))
+    (when declaration
+      (let-alist declaration
+        (psc-ide-unwrap-result (psc-ide-send-sync
+                                (psc-ide-command-usages
+                                 .module
+                                 "value"
+                                 (-if-let (qualified (psc-ide-split-qualifier symbol))
+                                     (alist-get 'identifier qualified )
+                                   symbol))))))))
+
 (defun psc-ide-build-completion-command (search manual)
   "Construct a completion command from the given SEARCH.
 
@@ -701,6 +716,37 @@ on whether WARN is true. Optionally EXPANDs type synonyms."
 ;; Utilities
 
 (add-to-list 'company-backends 'company-psc-ide-backend)
+
+;; xref-backend
+;;;###autoload
+(defun psc-ide-xref-backend ()
+  "psc-ide backend for Xref."
+  (when psc-ide-mode 'psc-ide))
+
+(cl-defmethod xref-backend-identifier-at-point ((_backend (eql psc-ide)))
+  (psc-ide-ident-at-point))
+
+(cl-defmethod xref-backend-identifier-completion-table ((_backend (eql psc-ide)))
+  nil)
+
+(cl-defmethod xref-backend-definitions ((_backend (eql psc-ide)) symbol)
+  nil)
+
+(cl-defmethod xref-backend-references ((_backend (eql psc-ide)) symbol)
+  (let* ((usages (psc-ide-find-usages symbol))
+         (basedir (psc-ide-unwrap-result (psc-ide-send-sync psc-ide-command-cwd))))
+    (seq-map (lambda (usage)
+               (let-alist usage
+                 (xref-make
+                  ""
+                  (xref-make-file-location
+                   ;; The compiler only stores paths relative to the project root in some cases
+                   (if (file-exists-p .name) .name (concat (file-name-as-directory basedir) .name))
+                   (elt .start 0)
+                   (elt .start 1)))))
+             usages)))
+
+(add-hook 'xref-backend-functions 'psc-ide-xref-backend)
 
 (provide 'psc-ide)
 
