@@ -573,14 +573,21 @@ If MANUAL is set, ignore the currently imported modules.
 
 The cases we have to cover:
 1. List.fil      <- filter by prefix and List module
+1a.List.fil      <- don't filter at all, if no import `List` exists
 2. fil| + manual <- don't filter at all
 3. fil|          <- filter by prefix and imported modules"
   (let* ((components (s-split "\\." search))
          (prefix (car (last components)))
          (qualifier (s-join "." (butlast components))))
     (if (not (s-blank? qualifier))
-        ;; 1. List.fil <- filter by prefix and List module
-        (psc-ide-qualified-completion-command prefix qualifier)
+        (if (null (psc-ide-modules-for-qualifier qualifier))
+          ;; 1a. List.fil <- don't filter at all, if no import `List` exists
+          (psc-ide-command-complete
+           (vector (psc-ide-filter-prefix prefix))
+           nil
+           (psc-ide-get-module-name))
+          ;; 1. List.fil <- filter by prefix and List module
+          (psc-ide-qualified-completion-command prefix qualifier))
       (if manual
           ;; 2. fil| + manual <- don't filter at all
           (psc-ide-command-complete
