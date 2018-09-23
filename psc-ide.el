@@ -241,6 +241,31 @@ Defaults to \"output/\" and should only be changed with
   (interactive)
   (psc-ide-send-sync psc-ide-command-quit))
 
+(defun psc-ide-server-start-with-psc-package-sources (root)
+  "start psc-ide-server with psc-package sources run in the root directory"
+  (interactive (list (read-directory-name "Project root?" (psc-ide-suggest-project-dir))))
+  (when (get-buffer "*psc-ide-server*") (kill-buffer "*psc-ide-server*"))
+  (cd root)
+  (if (file-exists-p "psc-package.json")
+      (let* ((results "*PSC-PACKAGE SOURCES*")
+             (errors "*PSC-PACKAGE ERRORS*"))
+        (shell-command "psc-package sources" results errors)
+        (if (get-buffer errors)
+            (switch-to-buffer-other-window errors)
+          (progn
+            (with-current-buffer results
+              (let* ((globs (split-string (buffer-string))))
+                (custom-set-variables
+                 '(psc-ide-source-globs
+                   (append globs
+                           (quote ("src/**/*.purs"
+                                   "bower_components/purescript-*/src/**/*.purs")))))
+                (kill-buffer results)))
+            (message "Set source globs from psc-package. Starting server..."))))
+    (message "No psc-package found. Starting psc-ide-server without setting psc-ide-source-globs."))
+  (psc-ide-server-start-impl root)
+  (run-at-time "1 sec" nil 'psc-ide-load-all))
+
 (defun psc-ide-load-module (module-name)
   "Load module with MODULE-NAME."
   (interactive (list (read-string "Module: " (psc-ide-get-module-name))))
