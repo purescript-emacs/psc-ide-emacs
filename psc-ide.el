@@ -163,7 +163,7 @@ Defaults to \"output/\" and should only be changed with
            (group (and (1+ (any word "."))))
            (opt (1+ space) "hiding")
            (opt (1+ space) "(" (group (0+ not-newline)) ")")
-           (opt (1+ space) "as" (1+ space) (group (and (1+ word)))))))
+           (opt (1+ space) "as" (1+ space) (group (and (1+ (any word "."))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
