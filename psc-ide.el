@@ -258,8 +258,7 @@ Defaults to \"output/\" and should only be changed with
                 (custom-set-variables
                  '(psc-ide-source-globs
                    (append globs
-                           (quote ("src/**/*.purs"
-                                   "bower_components/purescript-*/src/**/*.purs")))))
+                           (quote ("src/**/*.purs")))))
                 (kill-buffer results)))
             (message "Set source globs from psc-package. Starting server..."))))
     (message "No psc-package found. Starting psc-ide-server without setting psc-ide-source-globs."))
