@@ -94,10 +94,21 @@
   :group 'psc-ide
   :type 'string)
 
-(defcustom psc-ide-source-globs '("src/**/*.purs" "bower_components/purescript-*/src/**/*.purs")
-  "The source globs for your PureScript source files."
+(defcustom psc-ide-source-globs '("src/**/*.purs" "test/**/*.purs")
+  "The source globs for your PureScript source files.
+By default globs for dependencies from bower or psc-package will
+be appended on starting the server. If you want to override this
+behaviour and force JUST these globs take a look at
+`psc-ide-force-user-globs`"
   :group 'psc-ide
   :type  'sexp)
+
+(defcustom psc-ide-force-user-globs nil
+  "When set forces the exact usage of `psc-ide-source-globs`
+By default this is false, but it's here to support
+whatever wacky setup you are running"
+  :group 'psc-ide
+  :type 'boolean)
 
 (defcustom psc-ide-output-directory "output/"
   "Path to the output directory.
@@ -228,18 +239,43 @@ Defaults to \"output/\" and should only be changed with
                                        (psc-ide-filter-modules
                                         (list (get-text-property 0 :module arg))))))))))
 
-(defun psc-ide-server-start (dir-name)
+(defun psc-ide-server-start (root)
   "Start 'psc-ide-server' in DIR-NAME and load all modules."
-  (interactive (list (read-directory-name "Project root? "
-                                          (psc-ide-suggest-project-dir))))
-  (psc-ide-server-start-impl dir-name)
-  ;; After 1 second we send a load all command
+  (interactive (list (read-directory-name "Project root?" (psc-ide-suggest-project-dir))))
+  (cd root)
+  (psc-ide-server-start-impl root (unless psc-ide-force-user-globs
+                                    (psc-ide--server-start-globs)))
   (run-at-time "1 sec" nil 'psc-ide-load-all))
 
 (defun psc-ide-server-quit ()
   "Quit 'psc-ide-server'."
   (interactive)
   (psc-ide-send-sync psc-ide-command-quit))
+
+(defun psc-ide--server-start-globs ()
+  "Detects bower and psc-package projects and determines sensible
+  source globs"
+
+  (when (and (file-exists-p "psc-package.json") (file-exists-p "bower.json"))
+    (message "Detected both a \"psc-package.json\" and a \"bower.json\" file."))
+
+  (let ((server-globs psc-ide-source-globs))
+    (if (file-exists-p "psc-package.json")
+        (let* ((results "*PSC-PACKAGE SOURCES*")
+               (errors "*PSC-PACKAGE ERRORS*"))
+          (shell-command "psc-package sources" results errors)
+          (if (get-buffer errors)
+              (switch-to-buffer-other-window errors)
+            (progn
+              (with-current-buffer results
+                (let* ((globs (split-string (buffer-string))))
+                  (setq server-globs (append server-globs globs))
+                  (kill-buffer results)))
+              (message "Set source globs from psc-package. Starting server..."))))
+      (if (file-exists-p "bower.json")
+          (setq server-globs (append server-globs '("bower_components/purescript-*/src/**/*.purs")))
+        (message "Couldn't find psc-package.json nor bower.json files, using just the user specified globs.")))
+    server-globs))
 
 (defun psc-ide-load-module (module-name)
   "Load module with MODULE-NAME."
@@ -394,12 +430,12 @@ STRING is for use when the search used was with `string-match'."
   (psc-ide-send psc-ide-command-cwd
                 (-compose 'message 'psc-ide-unwrap-result)))
 
-(defun psc-ide-server-start-impl (dir-name)
+(defun psc-ide-server-start-impl (dir-name &optional globs)
   "Start psc-ide server in DIR-NAME."
   (apply 'start-process `("*psc-ide-server*" "*psc-ide-server*"
-                          ,@(psc-ide-server-command dir-name))))
+                          ,@(psc-ide-server-command dir-name globs))))
 
-(defun psc-ide-server-command (dir-name)
+(defun psc-ide-server-command (dir-name &optional globs)
   "Build a shell command to start `purs ide` in directory DIR-NAME.
 Tries to find the purs executable and builds up the command by
 appending eventual options. Returns a list that can be expanded
@@ -417,13 +453,14 @@ and passed to `start-process`."
          (debug-flags (when psc-ide-debug (if psc-ide-use-purs
                                               '("--log-level" "debug")
                                             '("--debug"))))
-         (editor-mode (when psc-ide-editor-mode '("--editor-mode"))))
+         (editor-mode (when psc-ide-editor-mode '("--editor-mode")))
+         (source-globs (or globs psc-ide-source-globs)))
     (if path
         (remove nil `(,@cmd "-p" ,port "-d" ,directory
                             "--output-directory" ,psc-ide-output-directory
                             ,@editor-mode
                             ,@debug-flags ,@psc-ide-server-extra-args
-                            ,@psc-ide-source-globs))
+                            ,@source-globs))
       (error (s-join " " '("Couldn't locate psc ide executable. You"
                            "could either customize the psc-ide-purs-executable"
                            " or psc-ide-server-executable if psc-ide-use-purs is nil,"

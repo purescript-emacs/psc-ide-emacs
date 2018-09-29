@@ -79,9 +79,12 @@
     #+BEGIN_SRC elisp
       ((purescript-mode
         . ((psc-ide-source-globs
-            . ("src/**/*.purs" "bower_components/purescript-*/src/**/*.purs")))))
+            . ("src/**/*.purs" "test/**/*.purs" "examples/**/*.purs")))))
     #+END_SRC
-    (Modify the globs accordingly)
+    Modify the globs accordingly and don't worry about dependency
+    globs for bower or psc-package projects. The plugin picks these up
+    by default. Check the doc-string for `psc-ide-source-globs` for
+    some advanced options.
 
 *** Add an import for the identifier under cursor ~C-c C-i~
 
