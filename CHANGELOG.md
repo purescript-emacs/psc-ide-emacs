@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## 2018-09-29 Automatically detects psc-package projects and sets globs accordingly
+
+- `psc-ide-source-globs` should now only specify non-dependency source
+  files (It's defaulted to `'("src/**/*.purs" "test/**/*.purs")`)
+
+- The plugin will now detect psc-package projects and call psc-package
+  sources to determine what source globs to pass to the editor
+
+- A new `psc-ide-force-user-globs` variable was introduced to override
+  the new behaviour and force the user specified globs
+
 ## 2018-05-17 Don't try to fix up temporary paths for flycheck (there shouldn't be any in the compiler output)
 ## 2018-05-17 Expand paths relative to the ide servers directory for go-to-definition
 
