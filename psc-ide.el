@@ -163,7 +163,7 @@ Defaults to \"output/\" and should only be changed with
            (group (and (1+ (any word "."))))
            (opt (1+ space) "hiding")
            (opt (1+ space) "(" (group (0+ not-newline)) ")")
-           (opt (1+ space) "as" (1+ space) (group (and (1+ word)))))))
+           (opt (1+ space) "as" (1+ space) (group (and (1+ (any word "."))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -231,13 +231,18 @@ Defaults to \"output/\" and should only be changed with
        (unless (or
                 ;; Don't add an import when the option to do so is disabled
                 (not psc-ide-add-import-on-completion)
-                ;; or when a qualified identifier was completed
-                (or (get-text-property 0 :qualifier arg) (s-contains-p "." (company-grab-symbol)))
                 ;; Don't attempt to import Prim members
                 (string= (get-text-property 0 :module arg) "Prim"))
-         (psc-ide-add-import-impl arg (vector
-                                       (psc-ide-filter-modules
-                                        (list (get-text-property 0 :module arg))))))))))
+         ;; determine if we want to do a normal import or attempt import qualified
+         (if (or (get-text-property 0 :qualifier arg) (s-contains-p "." (company-grab-symbol)))
+             ;; do qualified import with our unqualified identifier
+             (psc-ide-add-import-qualified-impl-write-buffer
+              (get-text-property 0 :module arg)
+              (s-join "." (get-text-property 0 :unqualified arg)))
+           ;; handle import on non qualified
+           (psc-ide-add-import-impl arg (vector
+                                         (psc-ide-filter-modules
+                                          (list (get-text-property 0 :module arg)))))))))))
 
 (defun psc-ide-server-start (root)
   "Start 'psc-ide-server' in DIR-NAME and load all modules."
@@ -522,10 +527,16 @@ and passed to `start-process`."
             (`1 (cdr (assoc 'module (aref completions 0))))
             (_ (completing-read "Which Module: "
                                 (seq-map (lambda (x) (let-alist x .module)) completions))))))
+    (psc-ide-add-import-qualified-impl-write-buffer module qualifier)))
+
+(defun psc-ide-add-import-qualified-impl-write-buffer (module qualifier)
+  "finish the qualified import process for a specified module and qualifier.
+  if `psc-ide-qualifier-for-module` comes back with the qualifier exsting, do nothing.
+"
     (unless (string= (psc-ide-qualifier-for-module module) qualifier)
       (save-buffer)
       (psc-ide-send-sync (psc-ide-command-add-qualified-import module qualifier))
-      (revert-buffer nil t))))
+      (revert-buffer nil t)))
 
 (defun psc-ide-company-fetcher (ignored &optional manual)
   "Create an asynchronous company fetcher.
@@ -573,14 +584,21 @@ If MANUAL is set, ignore the currently imported modules.
 
 The cases we have to cover:
 1. List.fil      <- filter by prefix and List module
+1a.List.fil      <- don't filter at all, if no import `List` exists
 2. fil| + manual <- don't filter at all
 3. fil|          <- filter by prefix and imported modules"
   (let* ((components (s-split "\\." search))
          (prefix (car (last components)))
          (qualifier (s-join "." (butlast components))))
     (if (not (s-blank? qualifier))
-        ;; 1. List.fil <- filter by prefix and List module
-        (psc-ide-qualified-completion-command prefix qualifier)
+        (if (null (psc-ide-modules-for-qualifier qualifier))
+          ;; 1a. List.fil <- don't filter at all, if no import `List` exists
+          (psc-ide-command-complete
+           (vector (psc-ide-filter-prefix prefix))
+           nil
+           (psc-ide-get-module-name))
+          ;; 1. List.fil <- filter by prefix and List module
+          (psc-ide-qualified-completion-command prefix qualifier))
       (if manual
           ;; 2. fil| + manual <- don't filter at all
           (psc-ide-command-complete
@@ -638,18 +656,22 @@ passes it into the callback"
   "Annotate a completion from psc-ide with `text-properties'.
 PARSED-IMPORTS are used to annotate the COMPLETION with qualifiers."
   (let-alist completion
-    (let* ((qualifier (psc-ide-qualifier-for-module .module parsed-imports))
+    (let* ((symbol (company-grab-symbol))
+           (looks-like-qualified (s-contains-p "." symbol))
+           (qualifier (psc-ide-qualifier-for-module .module parsed-imports))
            (identifier  (if (and psc-ide-add-qualification-on-completion
                                  qualifier
                                  ;; Don't add a qualifier if we're already
                                  ;; completing a qualified prefix
-                                 (not (s-contains-p "." (company-grab-symbol))))
+                                 (not looks-like-qualified))
                             (format "%s.%s" qualifier .identifier)
-                          .identifier)))
+                          .identifier))
+           (unqualified (if looks-like-qualified (butlast (s-split "\\." symbol)) nil)))
 
       (add-text-properties 0 1 (list :type .type
                                      :module .module
                                      :qualifier qualifier
+                                     :unqualified unqualified
                                      :documentation .documentation) identifier)
       ;; add-text-properties is sideeffecting and doesn't return the modified
       ;; string, so we need to explicitly return the identifier from here
