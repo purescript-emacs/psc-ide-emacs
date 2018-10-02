@@ -575,10 +575,16 @@ If supplied, GLOBS are the source file globs for this project."
             (`1 (cdr (assoc 'module (aref completions 0))))
             (_ (completing-read "Which Module: "
                                 (seq-map (lambda (x) (let-alist x .module)) completions))))))
-    (unless (string= (psc-ide-qualifier-for-module module) qualifier)
-      (save-buffer)
-      (psc-ide-send-sync (psc-ide-command-add-qualified-import module qualifier))
-      (revert-buffer nil t))))
+    (psc-ide-add-import-qualified-impl-write-buffer module qualifier)))
+
+(defun psc-ide-add-import-qualified-impl-write-buffer (module qualifier)
+  "finish the qualified import process for a specified module and qualifier.
+  if `psc-ide-qualifier-for-module` comes back with the qualifier exsting, do nothing.
+"
+  (unless (string= (psc-ide-qualifier-for-module module) qualifier)
+    (save-buffer)
+    (psc-ide-send-sync (psc-ide-command-add-qualified-import module qualifier))
+    (revert-buffer nil t)))
 
 (defun psc-ide-company-fetcher (_ &optional manual)
   "Create an asynchronous company fetcher.
