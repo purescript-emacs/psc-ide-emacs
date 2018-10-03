@@ -174,6 +174,9 @@ files."
 
 ;; Interactive.
 
+;; global state for unqualified import
+(setq psc-ide-unqualified-import-completion-qualifier nil)
+
 (defun psc-ide-rebuild-on-save-hook()
   "Rebuilds the current module on save."
   (when psc-ide-rebuild-on-save
@@ -220,13 +223,20 @@ COMMAND, ARG and IGNORED correspond to the standard company backend API."
        (unless (or
                 ;; Don't add an import when the option to do so is disabled
                 (not psc-ide-add-import-on-completion)
-                ;; or when a qualified identifier was completed
-                (or (get-text-property 0 :qualifier arg) (s-contains-p "." (company-grab-symbol)))
                 ;; Don't attempt to import Prim members
                 (string= (get-text-property 0 :module arg) "Prim"))
-         (psc-ide-add-import-impl arg (vector
-                                       (psc-ide-filter-modules
-                                        (list (get-text-property 0 :module arg))))))))))
+         (if (not (null psc-ide-unqualified-import-completion-qualifier))
+             (progn
+               ;; we know we need to import qualified at this point because we
+               ;; have come from psc-ide-unqualified-completion-command
+               (psc-ide-add-import-qualified-impl-write-buffer (get-text-property 0 :module arg)
+                                                               psc-ide-unqualified-import-completion-qualifier)
+               (setq psc-ide-unqualified-import-completion-qualifier nil))
+           ;; import as usual if we are not completing a qualified import
+           (unless (or (get-text-property 0 :qualifier arg) (s-contains-p "." (company-grab-symbol)))
+             (psc-ide-add-import-impl arg (vector
+                                           (psc-ide-filter-modules
+                                            (list (get-text-property 0 :module arg))))))))))))
 
 (defun psc-ide-server-start (root)
   "Start 'psc-ide-server' in the ROOT directory and load all modules."
@@ -634,20 +644,22 @@ If MANUAL is set, ignore the currently imported modules.
 
 The cases we have to cover:
 1. List.fil      <- filter by prefix and List module
+1a. List.fil     <- where `List` is not yet imported
 2. fil| + manual <- don't filter at all
 3. fil|          <- filter by prefix and imported modules"
   (let* ((components (s-split "\\." search))
          (prefix (car (last components)))
          (qualifier (s-join "." (butlast components))))
     (if (not (s-blank? qualifier))
-        ;; 1. List.fil <- filter by prefix and List module
-        (psc-ide-qualified-completion-command prefix qualifier)
+        (let ((modules (psc-ide-modules-for-qualifier qualifier)))
+          (if (not (null modules))
+              ;; 1. List.fil <- filter by prefix and List module
+              (psc-ide-qualified-completion-command modules prefix qualifier)
+            ;; 1a. List.fil     <- where `List` is not yet imported
+            (psc-ide-unqualified-completion-command prefix qualifier)))
       (if manual
           ;; 2. fil| + manual <- don't filter at all
-          (psc-ide-command-complete
-           (vector (psc-ide-filter-prefix prefix))
-           nil
-           (psc-ide-get-module-name))
+          (psc-ide-import-from-all-completion-command prefix)
         ;; 3. fil| <- filter by prefix and imported modules"
         (psc-ide-command-complete
          (vector (psc-ide-filter-prefix prefix)
@@ -655,14 +667,26 @@ The cases we have to cover:
          nil
          (psc-ide-get-module-name))))))
 
-(defun psc-ide-qualified-completion-command (prefix qualifier)
-  "Build a completion command for a PREFIX with QUALIFIER."
-  (let ((modules (psc-ide-modules-for-qualifier qualifier)))
-    (psc-ide-command-complete
-     (vector (psc-ide-filter-prefix prefix)
-             (psc-ide-filter-modules (vconcat modules)))
-     nil
-     (psc-ide-get-module-name))))
+(defun psc-ide-import-from-all-completion-command (prefix)
+  "Build a completion command for a PREFIX for all available modules."
+  (psc-ide-command-complete
+   (vector (psc-ide-filter-prefix prefix))
+   nil
+   (psc-ide-get-module-name)))
+
+(defun psc-ide-unqualified-completion-command (prefix qualifier)
+  "Build a completion command for a PREFIX with QUALIFIER that is not imported yet."
+  ;; set that we have started an unqualified import completion
+  (setq psc-ide-unqualified-import-completion-qualifier qualifier)
+  (psc-ide-import-from-all-completion-command prefix))
+
+(defun psc-ide-qualified-completion-command (modules prefix qualifier)
+  "Build a completion command with some MODULES for a PREFIX with QUALIFIER."
+  (psc-ide-command-complete
+   (vector (psc-ide-filter-prefix prefix)
+           (psc-ide-filter-modules (vconcat modules)))
+   nil
+   (psc-ide-get-module-name)))
 
 (defun psc-ide-all-imported-modules ()
   "Retrieve all imported modules for a buffer."
