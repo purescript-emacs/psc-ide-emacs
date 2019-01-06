@@ -64,6 +64,11 @@
   :prefix "psc-ide-"
   :group 'psc-ide)
 
+(defcustom psc-ide-major-mode-symbol 'purescript-mode
+  "A string to compare to if psc-ide should be performing operations."
+  :group 'psc-ide
+  :type 'symbol)
+
 (defcustom psc-ide-server-executable "psc-ide-server"
   "Path to the 'psc-ide-server' executable."
   :group 'psc-ide
@@ -177,7 +182,7 @@ Defaults to \"output/\" and should only be changed with
 
 (defun psc-ide-rebuild-on-save-hook()
   "Rebuilds the current module on save."
-  (when (eq major-mode 'purescript-mode)
+  (when (psc-ide-major-mode-check)
     (psc-ide-rebuild)))
 
 (when psc-ide-rebuild-on-save
@@ -196,17 +201,21 @@ Defaults to \"output/\" and should only be changed with
     (require 'psc-ide-flycheck)
     (psc-ide-flycheck-setup)))
 
+(defun psc-ide-major-mode-check ()
+  "Is purescript-mode or some other mode specified in psc-ide-major-mode-symbol running?"
+  (string= major-mode psc-ide-major-mode-symbol))
+
 (defun company-psc-ide-backend (command &optional arg &rest ignored)
   "The psc-ide backend for 'company-mode'."
   (interactive (list 'interactive))
 
-  (when (derived-mode-p 'purescript-mode)
+  (when (psc-ide-major-mode-check)
     (cl-case command
       (interactive (company-begin-backend 'company-psc-ide-backend))
 
       (init (psc-ide-init))
 
-      (prefix (when (and (eq major-mode 'purescript-mode)
+      (prefix (when (and (psc-ide-major-mode-check)
                          (not (company-in-string-or-comment)))
                 (let ((symbol (company-grab-symbol)))
                   (if symbol

@@ -134,7 +134,7 @@ CALLBACK is the status callback passed by flycheck."
 (flycheck-define-generic-checker 'psc-ide
   "A purescript syntax checker using the `psc-ide' interface."
   :start #'psc-ide-flycheck-start
-  :modes '(purescript-mode))
+  :modes (list psc-ide-major-mode-symbol))
 
 
 ;;;###autoload
