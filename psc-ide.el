@@ -270,7 +270,7 @@ Defaults to \"output/\" and should only be changed with
               (with-current-buffer results
                 (let* ((globs (split-string (buffer-string))))
                   (setq server-globs (append server-globs globs))
-                  (kill-buffer results)))
+                  (kill-buffer-and-window)))
               (message "Set source globs from psc-package. Starting server..."))))
       (if (file-exists-p "bower.json")
           (setq server-globs (append server-globs '("bower_components/purescript-*/src/**/*.purs")))
