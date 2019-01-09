@@ -65,7 +65,13 @@
   :group 'psc-ide)
 
 (defcustom psc-ide-major-mode-symbol 'purescript-mode
-  "A string to compare to if psc-ide should be performing operations."
+  "For checking if psc-ide actions should be performed in the current major mode.
+By default, 'purescript-mode is used to check if psc-ide actions should be
+performed. This is the behavior you will want when using psc-ide-emacs with
+purescript-emacs/purescript-mode. However, if you are using a different
+purescript major mode, you should set this custom variable to a symbol that
+matches the purescript mode you are using.
+"
   :group 'psc-ide
   :type 'symbol)
 
