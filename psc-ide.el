@@ -267,10 +267,11 @@ Defaults to \"output/\" and should only be changed with
           (if (get-buffer errors)
               (switch-to-buffer-other-window errors)
             (progn
-              (with-current-buffer results
+              (with-current-buffer (get-buffer-create results)
                 (let* ((globs (split-string (buffer-string))))
                   (setq server-globs (append server-globs globs))
-                  (kill-buffer-and-window)))
+                  (delete-windows-on results)
+                  (kill-buffer results)))
               (message "Set source globs from psc-package. Starting server..."))))
       (if (file-exists-p "bower.json")
           (setq server-globs (append server-globs '("bower_components/purescript-*/src/**/*.purs")))
