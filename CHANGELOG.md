@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 2019-01-10 Allow for customizing the major mode symbol
+
+- `psc-ide-major-mode-symbol` can now be changed from `'purescript-mode` to any symbol value to work with other purescript modes.
+
+- This value will determine whether or not psc-ide actions should be performed for a given major mode.
+
 ## 2018-09-29 Automatically detects psc-package projects and sets globs accordingly
 
 - `psc-ide-source-globs` should now only specify non-dependency source
