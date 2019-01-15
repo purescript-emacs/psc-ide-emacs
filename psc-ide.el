@@ -124,12 +124,6 @@ Defaults to \"output/\" and should only be changed with
   :group 'psc-ide
   :type  'boolean)
 
-(defcustom psc-ide-completion-matcher "flex"
-  "The method used for completions."
-  :options '("flex" "prefix")
-  :group 'psc-ide
-  :type  'string)
-
 (defcustom psc-ide-add-import-on-completion "t"
   "Whether to add imports on completion."
   :group 'psc-ide
