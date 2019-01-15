@@ -77,12 +77,13 @@
   :type  'string)
 
 (defcustom psc-ide-use-npm-bin nil
-  "Whether to use `npm bin` to determine the location of the psc ide server."
+  "Whether to use 'npm bin' to determine the location of the psc ide server."
   :group 'psc-ide
   :type  'boolean)
 
 (defcustom psc-ide-use-purs t
-  "Whether to use `purs ide' to start psc ide server, if nil fallback to use old psc-ide-server."
+  "When non-nil, use 'purs ide' to start psc ide server.
+Otherwise, fall back to use old psc-ide-server."
   :group 'psc-ide
   :type 'boolean)
 
@@ -99,14 +100,14 @@
 (defcustom psc-ide-source-globs '("src/**/*.purs" "test/**/*.purs")
   "The source globs for your PureScript source files.
 By default globs for dependencies from bower or psc-package will
-be appended on starting the server. If you want to override this
+be appended on starting the server.  If you want to override this
 behaviour and force JUST these globs take a look at
 `psc-ide-force-user-globs`"
   :group 'psc-ide
   :type  '(repeat string))
 
 (defcustom psc-ide-force-user-globs nil
-  "When set forces the exact usage of `psc-ide-source-globs`
+  "When set forces the exact usage of `psc-ide-source-globs'.
 By default this is false, but it's here to support
 whatever wacky setup you are running"
   :group 'psc-ide
@@ -115,7 +116,7 @@ whatever wacky setup you are running"
 (defcustom psc-ide-output-directory "output/"
   "Path to the output directory.
 Defaults to \"output/\" and should only be changed with
-.dir-locals.el to accomodate for project specific setups"
+.dir-locals.el to accommodate project-specific setups."
   :group 'psc-ide
   :type  'string)
 
@@ -193,7 +194,8 @@ Defaults to \"output/\" and should only be changed with
     (psc-ide-flycheck-setup)))
 
 (defun company-psc-ide-backend (command &optional arg &rest ignored)
-  "The psc-ide backend for 'company-mode'."
+  "The psc-ide backend for `company-mode'.
+COMMAND, ARG and IGNORED correspond to the standard company backend API."
   (interactive (list 'interactive))
 
   (when (derived-mode-p 'purescript-mode)
@@ -433,10 +435,12 @@ STRING is for use when the search used was with `string-match'."
                           ,@(psc-ide-server-command dir-name globs))))
 
 (defun psc-ide-server-command (dir-name &optional globs)
-  "Build a shell command to start `purs ide` in directory DIR-NAME.
+  "Build a shell command to start 'purs ide' in directory DIR-NAME.
 Tries to find the purs executable and builds up the command by
-appending eventual options. Returns a list that can be expanded
-and passed to `start-process`."
+appending eventual options.  Returns a list that can be expanded
+and passed to `start-process`.
+
+If supplied, GLOBS are the source file globs for this project."
   (let* ((executable-name (psc-ide-executable-name))
          (npm-bin-path (if psc-ide-use-npm-bin
                            (psc-ide-npm-bin-server-executable executable-name)
@@ -524,11 +528,12 @@ and passed to `start-process`."
       (psc-ide-send-sync (psc-ide-command-add-qualified-import module qualifier))
       (revert-buffer nil t))))
 
-(defun psc-ide-company-fetcher (ignored &optional manual)
+(defun psc-ide-company-fetcher (_ &optional manual)
   "Create an asynchronous company fetcher.
-Grabs the symbol at point at creates an asynchronous
-completer. We ignore the prefix we get from company, because it
-doesn't contain eventual qualifiers."
+Grabs the symbol at point at creates an asynchronous completer.
+We ignore the prefix we get from company, because it doesn't
+contain eventual qualifiers.  MANUAL is as per
+`psc-ide-complete-async'."
   (let ((prefix (company-grab-symbol)))
   `(:async . ,(-partial 'psc-ide-complete-async prefix manual))))
 
@@ -550,6 +555,7 @@ CALLBACK receives the asynchronously retrieved completions."
         (qualifier . ,qualifier)))))
 
 (defun psc-ide-find-usages (symbol)
+  "Find usages of SYMBOL."
   (let* ((declaration (elt (psc-ide-unwrap-result
                             (psc-ide-send-sync (psc-ide-build-completion-command symbol nil)))
                            0)))
@@ -614,7 +620,7 @@ The cases we have to cover:
 
 (defun psc-ide-qualifier-for-module (module &optional parsed-imports)
   "Search the current module's imports for MODULE and return its qualifier.
-Return nil if the module is not imported qualified. Does not
+Return nil if the module is not imported qualified.  Does not
 reparse if PARSED-IMPORTS is passed."
   (let ((imports (or parsed-imports (psc-ide-parse-imports-in-buffer))))
     (-first-item
@@ -688,7 +694,7 @@ Is a no-op if the path is absolute"
 (defun psc-ide-show-type-impl (search &optional warn expand)
   "Print a message that describes the type of SEARCH.
 If the type of SEARCH is not found it prints a warning depending
-on whether WARN is true. Optionally EXPANDs type synonyms."
+on whether WARN is true.  Optionally EXPANDs type synonyms."
   (let ((handler
          (lambda (resp)
            (let ((result (psc-ide-unwrap-result resp)))
@@ -752,7 +758,7 @@ on whether WARN is true. Optionally EXPANDs type synonyms."
 ;; xref-backend
 ;;;###autoload
 (defun psc-ide-xref-backend ()
-  "psc-ide backend for Xref."
+  "Xref backend for psc-ide."
   (when psc-ide-mode 'psc-ide))
 
 (cl-defmethod xref-backend-identifier-at-point ((_backend (eql psc-ide)))
