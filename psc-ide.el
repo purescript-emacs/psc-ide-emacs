@@ -534,7 +534,7 @@ We ignore the prefix we get from company, because it doesn't
 contain eventual qualifiers.  MANUAL is as per
 `psc-ide-complete-async'."
   (let ((prefix (company-grab-symbol)))
-  `(:async . ,(-partial 'psc-ide-complete-async prefix manual))))
+    `(:async . ,(-partial 'psc-ide-complete-async prefix manual))))
 
 (defun psc-ide-complete-async (prefix manual callback)
   "Sends a completion command for PREFIX to purs ide.
