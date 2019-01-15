@@ -238,11 +238,11 @@ COMMAND, ARG and IGNORED correspond to the standard company backend API."
                                         (list (get-text-property 0 :module arg))))))))))
 
 (defun psc-ide-server-start (root)
-  "Start 'psc-ide-server' in DIR-NAME and load all modules."
-  (interactive (list (read-directory-name "Project root?" (psc-ide-suggest-project-dir))))
-  (cd root)
-  (psc-ide-server-start-impl root (unless psc-ide-force-user-globs
-                                    (psc-ide--server-start-globs)))
+  "Start 'psc-ide-server' in the ROOT directory and load all modules."
+  (interactive (list (read-directory-name "Project root: " (psc-ide-suggest-project-dir))))
+  (let ((default-directory root))
+    (psc-ide-server-start-impl root (unless psc-ide-force-user-globs
+                                      (psc-ide--server-start-globs))))
   (run-at-time "1 sec" nil 'psc-ide-load-all))
 
 (defun psc-ide-server-quit ()
