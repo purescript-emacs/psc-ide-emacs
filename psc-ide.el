@@ -440,11 +440,7 @@ appending eventual options.  Returns a list that can be expanded
 and passed to `start-process`.
 
 If supplied, GLOBS are the source file globs for this project."
-  (let* ((executable-name (psc-ide-executable-name))
-         (npm-bin-path (if psc-ide-use-npm-bin
-                           (psc-ide-npm-bin-server-executable executable-name)
-                         nil))
-         (path (or npm-bin-path (executable-find executable-name)))
+  (let* ((path (psc-ide-executable-path))
          (cmd (if psc-ide-use-purs
                   `(,path "ide" "server")
                 `(,path)))
@@ -466,11 +462,20 @@ If supplied, GLOBS are the source file globs for this project."
                            " or psc-ide-server-executable if psc-ide-use-purs is nil,"
                            " or set the psc-ide-use-npm-bin variable to"
                            " true, or put the executable on your path."))))))
+
 (defun psc-ide-executable-name ()
   "Find ide executable name."
   (if psc-ide-use-purs
       psc-ide-purs-executable
     psc-ide-server-executable))
+
+(defun psc-ide-executable-path ()
+  "Return the full path to the IDE server executable."
+  (let* ((executable-name (psc-ide-executable-name))
+         (npm-bin-path (if psc-ide-use-npm-bin
+                           (psc-ide-npm-bin-server-executable executable-name)
+                         nil)))
+    (or npm-bin-path (executable-find executable-name))))
 
 (defun psc-ide-npm-bin-server-executable (cmd)
   "Find psc-ide server binary CMD of current project by invoking `npm bin`."
@@ -480,7 +485,7 @@ If supplied, GLOBS are the source file globs for this project."
 
 (defun psc-ide-server-version ()
   "Return the version of the found psc-ide-server executable."
-  (let ((path (executable-find (psc-ide-executable-name))))
+  (let ((path (psc-ide-executable-path)))
     (s-chomp (shell-command-to-string (s-concat path " --version")))))
 
 (defun psc-ide-load-module-impl (module-name)
