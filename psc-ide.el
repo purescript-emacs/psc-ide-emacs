@@ -251,26 +251,31 @@ COMMAND, ARG and IGNORED correspond to the standard company backend API."
   (psc-ide-send-sync psc-ide-command-quit))
 
 (defun psc-ide--server-start-globs ()
-  "Detects bower and psc-package projects and determines sensible
-  source globs"
+  "Detects bower and psc-package projects and determines sensible source globs."
 
   (when (and (file-exists-p "psc-package.json") (file-exists-p "bower.json"))
     (message "Detected both a \"psc-package.json\" and a \"bower.json\" file."))
 
   (let ((server-globs psc-ide-source-globs))
     (if (file-exists-p "psc-package.json")
-        (let* ((results "*PSC-PACKAGE SOURCES*")
-               (errors "*PSC-PACKAGE ERRORS*"))
-          (shell-command "psc-package sources" results errors)
-          (if (get-buffer errors)
-              (switch-to-buffer-other-window errors)
-            (progn
-              (with-current-buffer (get-buffer-create results)
-                (let* ((globs (split-string (buffer-string))))
-                  (setq server-globs (append server-globs globs))
-                  (delete-windows-on results)
-                  (kill-buffer results)))
-              (message "Set source globs from psc-package. Starting server..."))))
+        (let ((results "*PSC-PACKAGE SOURCES*")
+              (err-file (make-temp-file "psc-package-errs")))
+          (unwind-protect
+              (if (zerop (call-process "psc-package" nil (list results err-file) nil "sources"))
+                  (progn
+                    (with-current-buffer (get-buffer results)
+                      (let ((globs (split-string (buffer-string) "[\r\n]+" t)))
+                        (setq server-globs (append server-globs globs))
+                        (delete-windows-on results)
+                        (kill-buffer results)))
+                    (message "Set source globs from psc-package. Starting server..."))
+                (with-current-buffer (get-buffer-create "*PSC-PACKAGE ERRORS*")
+                  (let ((inhibit-read-only t))
+                    (insert-file-contents err-file nil nil nil t))
+                  (special-mode)
+                  (display-buffer (current-buffer))
+                  (error "Error executing psc-package")))
+            (delete-file err-file)))
       (if (file-exists-p "bower.json")
           (setq server-globs (append server-globs '("bower_components/purescript-*/src/**/*.purs")))
         (message "Couldn't find psc-package.json nor bower.json files, using just the user specified globs.")))
