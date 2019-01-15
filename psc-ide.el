@@ -198,7 +198,7 @@ Defaults to \"output/\" and should only be changed with
 COMMAND, ARG and IGNORED correspond to the standard company backend API."
   (interactive (list 'interactive))
 
-  (when (derived-mode-p 'purescript-mode)
+  (when psc-ide-mode
     (cl-case command
       (interactive (company-begin-backend 'company-psc-ide-backend))
 
