@@ -555,9 +555,9 @@ CALLBACK receives the asynchronously retrieved completions."
 
 (defun psc-ide-find-usages (symbol)
   "Find usages of SYMBOL."
-  (let* ((declaration (elt (psc-ide-unwrap-result
-                            (psc-ide-send-sync (psc-ide-build-completion-command symbol nil)))
-                           0)))
+  (let ((declaration (elt (psc-ide-unwrap-result
+                           (psc-ide-send-sync (psc-ide-build-completion-command symbol nil)))
+                          0)))
     (when declaration
       (let-alist declaration
         (psc-ide-unwrap-result (psc-ide-send-sync
