@@ -10,7 +10,7 @@
 ;;            Brian Sermons
 ;; Homepage : https://github.com/epost/psc-ide-emacs
 ;; Version  : 0.1.0
-;; Package-Requires: ((dash "2.13.0") (dash-functional "1.2.0") (company "0.8.7") (cl-lib "0.5") (s "1.10.0") (emacs "24.4") (flycheck "0.24") (let-alist "1.0.4") (seq "1.11"))
+;; Package-Requires: ((dash "2.13.0") (dash-functional "1.2.0") (company "0.8.7") (s "1.10.0") (emacs "25") (flycheck "0.24") (let-alist "1.0.4") (seq "1.11"))
 ;; Keywords : languages
 
 ;;; Commentary:
