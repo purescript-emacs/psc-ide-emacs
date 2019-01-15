@@ -53,7 +53,9 @@
             (define-key map (kbd "C-c C-b") 'psc-ide-rebuild)
             (define-key map (kbd "M-.") 'psc-ide-goto-definition)
             (define-key map (kbd "M-,") 'pop-tag-mark)
-            map))
+            map)
+  (when psc-ide-mode
+    (setq-local company-tooltip-align-annotations t)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -746,8 +748,6 @@ on whether WARN is true. Optionally EXPANDs type synonyms."
         (font-lock-ensure)
         (buffer-string))
     string))
-
-(setq company-tooltip-align-annotations t)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
