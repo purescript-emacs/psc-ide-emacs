@@ -430,9 +430,8 @@ STRING is for use when the search used was with `string-match'."
                 (-compose 'message 'psc-ide-unwrap-result)))
 
 (defun psc-ide-server-start-impl (dir-name &optional globs)
-  "Start psc-ide server in DIR-NAME."
-  (apply 'start-process `("*psc-ide-server*" "*psc-ide-server*"
-                          ,@(psc-ide-server-command dir-name globs))))
+  "Start psc-ide server in DIR-NAME with the given source GLOBS."
+  (apply 'start-process "*psc-ide-server*" "*psc-ide-server*" (psc-ide-server-command dir-name globs)))
 
 (defun psc-ide-server-command (dir-name &optional globs)
   "Build a shell command to start 'purs ide' in directory DIR-NAME.
