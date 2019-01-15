@@ -124,12 +124,12 @@ Defaults to \"output/\" and should only be changed with
   :group 'psc-ide
   :type  'boolean)
 
-(defcustom psc-ide-add-import-on-completion "t"
+(defcustom psc-ide-add-import-on-completion t
   "Whether to add imports on completion."
   :group 'psc-ide
   :type 'boolean)
 
-(defcustom psc-ide-add-qualification-on-completion "t"
+(defcustom psc-ide-add-qualification-on-completion t
   "Whether to automatically prepend the qualifier for completions that are imported qualified in the current module."
   :group 'psc-ide
   :type 'boolean)
