@@ -457,11 +457,11 @@ If supplied, GLOBS are the source file globs for this project."
                             ,@editor-mode
                             ,@debug-flags ,@psc-ide-server-extra-args
                             ,@source-globs))
-      (error (s-join " " '("Couldn't locate psc ide executable. You"
-                           "could either customize the psc-ide-purs-executable"
-                           " or psc-ide-server-executable if psc-ide-use-purs is nil,"
-                           " or set the psc-ide-use-npm-bin variable to"
-                           " true, or put the executable on your path."))))))
+      (error (concat "Couldn't locate psc ide executable. You"
+                     " could either customize the psc-ide-purs-executable"
+                     " or psc-ide-server-executable if psc-ide-use-purs is nil,"
+                     " or set the psc-ide-use-npm-bin variable to"
+                     " true, or put the executable on your path.")))))
 
 (defun psc-ide-executable-name ()
   "Find ide executable name."
