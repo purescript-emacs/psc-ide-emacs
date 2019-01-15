@@ -62,7 +62,7 @@
 (defgroup psc-ide nil
   "Settings for psc-ide."
   :prefix "psc-ide-"
-  :group 'psc-ide)
+  :group 'languages)
 
 (defcustom psc-ide-server-executable "psc-ide-server"
   "Path to the 'psc-ide-server' executable."
