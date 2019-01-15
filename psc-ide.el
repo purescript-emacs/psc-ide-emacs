@@ -188,7 +188,7 @@ Defaults to \"output/\" and should only be changed with
        (psc-ide-parse-imports-in-buffer)))
 
 (with-eval-after-load 'flycheck
-  (when (not psc-ide-disable-flycheck)
+  (unless psc-ide-disable-flycheck
     (require 'psc-ide-flycheck)
     (psc-ide-flycheck-setup)))
 
