@@ -103,7 +103,7 @@ be appended on starting the server. If you want to override this
 behaviour and force JUST these globs take a look at
 `psc-ide-force-user-globs`"
   :group 'psc-ide
-  :type  'sexp)
+  :type  '(repeat string))
 
 (defcustom psc-ide-force-user-globs nil
   "When set forces the exact usage of `psc-ide-source-globs`
