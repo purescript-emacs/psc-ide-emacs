@@ -54,8 +54,11 @@
             (define-key map (kbd "M-.") 'psc-ide-goto-definition)
             (define-key map (kbd "M-,") 'pop-tag-mark)
             map)
-  (when psc-ide-mode
-    (setq-local company-tooltip-align-annotations t)))
+  (if psc-ide-mode
+      (progn
+        (setq-local company-tooltip-align-annotations t)
+        (add-hook 'after-save-hook 'psc-ide-rebuild-on-save-hook nil t))
+    (remove-hook 'after-save-hook 'psc-ide-rebuild-on-save-hook t)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -174,11 +177,8 @@ Defaults to \"output/\" and should only be changed with
 
 (defun psc-ide-rebuild-on-save-hook()
   "Rebuilds the current module on save."
-  (when (eq major-mode 'purescript-mode)
+  (when psc-ide-rebuild-on-save
     (psc-ide-rebuild)))
-
-(when psc-ide-rebuild-on-save
-  (add-hook 'after-save-hook 'psc-ide-rebuild-on-save-hook))
 
 (defun psc-ide-init ()
   "Initialization for psc-ide-mode."
