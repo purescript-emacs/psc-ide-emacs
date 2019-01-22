@@ -1,8 +1,10 @@
 # CHANGELOG
 
+## 2019-01-22 Detect and handle spago projects
+
 ## 2019-01-15 No longer uses shell-expansion when calling the psc-package command
 
-- This might mean that Windows users that use a wrapped psc-package executable will 
+- This might mean that Windows users that use a wrapped psc-package executable will
   need to put the actual executable on the path
 
 ## 2018-09-29 Automatically detects psc-package projects and sets globs accordingly

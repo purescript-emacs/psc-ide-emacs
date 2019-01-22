@@ -251,34 +251,65 @@ COMMAND, ARG and IGNORED correspond to the standard company backend API."
   (psc-ide-send-sync psc-ide-command-quit))
 
 (defun psc-ide--server-start-globs ()
-  "Detects bower and psc-package projects and determines sensible source globs."
+  "Detects bower, psc-package and spago projects and determines sensible source globs."
 
-  (when (and (file-exists-p "psc-package.json") (file-exists-p "bower.json"))
-    (message "Detected both a \"psc-package.json\" and a \"bower.json\" file."))
+  (let* ((project-globs ["psc-package.json" "bower.json" "spago.dhall"])
+        (found-package-files (seq-filter 'file-exists-p project-globs)))
+    (when (> (length found-package-files) 1)
+      (message
+       (concat "Detected multiple project files: "
+               (mapconcat 'identity found-package-files ", ")))))
 
   (let ((server-globs psc-ide-source-globs))
-    (if (file-exists-p "psc-package.json")
-        (let ((results "*PSC-PACKAGE SOURCES*")
-              (err-file (make-temp-file "psc-package-errs")))
-          (unwind-protect
-              (if (zerop (call-process "psc-package" nil (list results err-file) nil "sources"))
-                  (progn
-                    (with-current-buffer (get-buffer results)
-                      (let ((globs (split-string (buffer-string) "[\r\n]+" t)))
-                        (setq server-globs (append server-globs globs))
-                        (delete-windows-on results)
-                        (kill-buffer results)))
-                    (message "Set source globs from psc-package. Starting server..."))
-                (with-current-buffer (get-buffer-create "*PSC-PACKAGE ERRORS*")
-                  (let ((inhibit-read-only t))
-                    (insert-file-contents err-file nil nil nil t))
-                  (special-mode)
-                  (display-buffer (current-buffer))
-                  (error "Error executing psc-package")))
-            (delete-file err-file)))
-      (if (file-exists-p "bower.json")
-          (setq server-globs (append server-globs '("bower_components/purescript-*/src/**/*.purs")))
-        (message "Couldn't find psc-package.json nor bower.json files, using just the user specified globs.")))
+    (cond ((file-exists-p "psc-package.json") (add-psc-package-globs))
+          ((file-exists-p "bower.json") (add-bower-globs))
+          ((file-exists-p "spago.dhall") (add-spago-globs))
+          (t (message "Couldn't find psc-package.json, bower.json nor spago.dhall files, using just the user specified globs.")))))
+
+(defun add-psc-package-globs ()
+  (add-globs
+   "*PSC-PACKAGE SOURCES*"
+   "*PSC-PACKAGE ERRORS*"
+   "psc-package-errs"
+   '(("cmd" . "psc-package")
+     ("args" . ("sources")))))
+
+(defun add-spago-globs ()
+  (add-globs
+   "*SPAGO SOURCES*"
+   "*SPAGO ERRORS*"
+   "spago-errs"
+   '(("cmd" . "spago")
+     ("args" . ("sources")))))
+
+(defun add-bower-globs ()
+  (append psc-ide-source-globs '("bower_components/purescript-*/src/**/*.purs")))
+
+(defun add-globs (results errors err-file cmd-alist)
+  "Takes
+  - a result buffer name
+  - an error buffer name
+  - an error file name
+  - a command name and its arguments as an alist, e.g. ((\"cmd\" . \"psc-package\") (\"args\" . (\"sources\")))"
+  (let ((server-globs psc-ide-source-globs)
+        (cmd      (cdr (assoc "cmd" cmd-alist)))
+        (cmd-args (cdr (assoc "args" cmd-alist))))
+    (unwind-protect
+        (if (zerop (apply 'call-process cmd nil (list results err-file) nil cmd-args))
+            (progn
+              (with-current-buffer (get-buffer results)
+                (let ((globs (split-string (buffer-string) "[\r\n]+" t)))
+                  (setq server-globs (append server-globs globs))
+                  (delete-windows-on results)
+                  (kill-buffer results)))
+              (message (format "Set source globs from %s. Starting server..." cmd)))
+          (with-current-buffer (get-buffer-create errors)
+            (let ((inhibit-read-only t))
+              (insert-file-contents err-file nil nil nil t))
+            (special-mode)
+            (display-buffer (current-buffer))
+            (error (format "Error executing %s" cmd))))
+      (delete-file err-file))
     server-globs))
 
 (defun psc-ide-load-module (module-name)
