@@ -272,7 +272,7 @@ COMMAND, ARG and IGNORED correspond to the standard company backend API."
    "*PSC-PACKAGE ERRORS*"
    "psc-package-errs"
    '(("cmd" . "psc-package")
-     ("args" . "sources"))))
+     ("args" . ("sources")))))
 
 (defun add-spago-globs ()
   (add-globs
@@ -280,7 +280,7 @@ COMMAND, ARG and IGNORED correspond to the standard company backend API."
    "*SPAGO ERRORS*"
    "spago-errs"
    '(("cmd" . "spago")
-     ("args" . "sources"))))
+     ("args" . ("sources")))))
 
 (defun add-bower-globs ()
   (append psc-ide-source-globs '("bower_components/purescript-*/src/**/*.purs")))
@@ -290,12 +290,12 @@ COMMAND, ARG and IGNORED correspond to the standard company backend API."
   - a result buffer name
   - an error buffer name
   - an error file name
-  - a command name and its arguments as an alist, e.g. ((\"cmd\" . \"psc-package\") (\"args\" . \"sources\"))"
+  - a command name and its arguments as an alist, e.g. ((\"cmd\" . \"psc-package\") (\"args\" . (\"sources\")))"
   (let ((server-globs psc-ide-source-globs)
         (cmd      (cdr (assoc "cmd" cmd-alist)))
         (cmd-args (cdr (assoc "args" cmd-alist))))
     (unwind-protect
-        (if (zerop (call-process cmd nil (list results err-file) nil cmd-args))
+        (if (zerop (apply 'call-process cmd nil (list results err-file) nil cmd-args))
             (progn
               (with-current-buffer (get-buffer results)
                 (let ((globs (split-string (buffer-string) "[\r\n]+" t)))
