@@ -204,8 +204,7 @@ COMMAND, ARG and IGNORED correspond to the standard company backend API."
 
       (init (psc-ide-init))
 
-      (prefix (when (and (eq major-mode 'purescript-mode)
-                         (not (company-in-string-or-comment)))
+      (prefix (unless (company-in-string-or-comment)
                 (let ((symbol (company-grab-symbol)))
                   (if symbol
                       ;; We strip of the qualifier so that it doesn't get
