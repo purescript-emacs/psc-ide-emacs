@@ -252,57 +252,57 @@ COMMAND, ARG and IGNORED correspond to the standard company backend API."
 
 (defun psc-ide--server-start-globs ()
   "Detects bower, psc-package and spago projects and determines sensible source globs."
-
-  (let* ((project-globs ["psc-package.json" "bower.json" "spago.dhall"])
-        (found-package-files (seq-filter 'file-exists-p project-globs)))
-    (when (> (length found-package-files) 1)
+  (append
+   psc-ide-source-globs
+   (pcase (seq-filter 'file-exists-p '("psc-package.json" "bower.json" "spago.dhall"))
+     ('()
+      (message "Couldn't find psc-package.json, bower.json nor spago.dhall files, using just the user specified globs.")
+      nil)
+     ('("psc-package.json") (psc-ide--psc-package-globs))
+     ('("bower.json") (psc-ide--bower-globs))
+     ('("spago.dhall") (psc-ide--spago-globs))
+     (_
       (message
        (concat "Detected multiple project files: "
-               (mapconcat 'identity found-package-files ", ")))))
+               (mapconcat 'identity found-package-files ", ")))
+      nil))))
 
-  (let ((server-globs psc-ide-source-globs))
-    (cond ((file-exists-p "psc-package.json") (add-psc-package-globs))
-          ((file-exists-p "bower.json") (add-bower-globs))
-          ((file-exists-p "spago.dhall") (add-spago-globs))
-          (t (message "Couldn't find psc-package.json, bower.json nor spago.dhall files, using just the user specified globs.")))))
-
-(defun add-psc-package-globs ()
-  (add-globs
+(defun psc-ide--psc-package-globs ()
+  "Add file globs for psc-package projects."
+  (psc-ide--parse-globs
    "*PSC-PACKAGE SOURCES*"
    "*PSC-PACKAGE ERRORS*"
-   "psc-package-errs"
    '(("cmd" . "psc-package")
      ("args" . ("sources")))))
 
-(defun add-spago-globs ()
-  (add-globs
+(defun psc-ide--spago-globs ()
+  "Add file globs for spago projects."
+  (psc-ide--parse-globs
    "*SPAGO SOURCES*"
    "*SPAGO ERRORS*"
-   "spago-errs"
    '(("cmd" . "spago")
      ("args" . ("sources")))))
 
-(defun add-bower-globs ()
-  (append psc-ide-source-globs '("bower_components/purescript-*/src/**/*.purs")))
+(defun psc-ide--bower-globs ()
+  "Add file globs for spago projects."
+  '("bower_components/purescript-*/src/**/*.purs"))
 
-(defun add-globs (results errors err-file cmd-alist)
-  "Takes
-  - a result buffer name
-  - an error buffer name
-  - an error file name
-  - a command name and its arguments as an alist, e.g. ((\"cmd\" . \"psc-package\") (\"args\" . (\"sources\")))"
-  (let ((server-globs psc-ide-source-globs)
+(defun psc-ide--parse-globs (results errors cmd-alist)
+  "Return the printed by a command.
+RESULTS and ERRORS are buffer names.
+CMD-ALIST is a command name and its arguments, e.g. ((\"cmd\" . \"psc-package\") (\"args\" . (\"sources\")))"
+  (let (server-globs
+        (err-file (make-temp-file "psc-ide-globs"))
         (cmd      (cdr (assoc "cmd" cmd-alist)))
         (cmd-args (cdr (assoc "args" cmd-alist))))
     (unwind-protect
         (if (zerop (apply 'call-process cmd nil (list results err-file) nil cmd-args))
             (progn
               (with-current-buffer (get-buffer results)
-                (let ((globs (split-string (buffer-string) "[\r\n]+" t)))
-                  (setq server-globs (append server-globs globs))
-                  (delete-windows-on results)
-                  (kill-buffer results)))
-              (message (format "Set source globs from %s. Starting server..." cmd)))
+                (setq server-globs (split-string (buffer-string) "[\r\n]+" t))
+                (delete-windows-on results)
+                (kill-buffer results))
+              (message (format "Parsed source globs from %s. Starting server..." cmd)))
           (with-current-buffer (get-buffer-create errors)
             (let ((inhibit-read-only t))
               (insert-file-contents err-file nil nil nil t))
