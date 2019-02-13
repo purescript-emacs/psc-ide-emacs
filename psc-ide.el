@@ -399,7 +399,8 @@ ERROR-TYPE is either \"error\" or \"warning\" and gets displayed with the RAW-ME
 
 (defun psc-ide-show-type-eldoc ()
   "Show type of the symbol under cursor, but be quiet about failures."
-  (psc-ide-show-type-impl (psc-ide-ident-at-point)))
+  (when (psc-ide-server-running-p)
+    (psc-ide-show-type-impl (psc-ide-ident-at-point))))
 
 (defun psc-ide-case-split-impl (type)
   "Case Split on identifier of TYPE under cursor."
