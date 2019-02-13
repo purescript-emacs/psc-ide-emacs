@@ -169,12 +169,6 @@ Defaults to \"output/\" and should only be changed with
 
 ;; Interactive.
 
-(add-hook 'after-save-hook
-          (lambda ()
-            (set 'psc-ide-buffer-import-list
-                 (psc-ide-parse-imports-in-buffer)))
-          nil t)
-
 (defun psc-ide-rebuild-on-save-hook()
   "Rebuilds the current module on save."
   (when psc-ide-rebuild-on-save
@@ -184,9 +178,7 @@ Defaults to \"output/\" and should only be changed with
   "Initialization for psc-ide-mode."
   (interactive)
   (add-function :before-until (local 'eldoc-documentation-function)
-                #'psc-ide-show-type-eldoc)
-  (set (make-local-variable 'psc-ide-buffer-import-list)
-       (psc-ide-parse-imports-in-buffer)))
+                #'psc-ide-show-type-eldoc))
 
 (with-eval-after-load 'flycheck
   (unless psc-ide-disable-flycheck
