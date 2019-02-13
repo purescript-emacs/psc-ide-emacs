@@ -129,9 +129,14 @@ CALLBACK is the status callback passed by flycheck."
                        (flycheck-safe-delete-temporaries)
                        (funcall callback 'errored (error-message-string err))))))))
 
+(defun psc-ide-flycheck-available-p ()
+  "Return non-nil if we can use the psc-ide flycheck backend in this buffer."
+  (and psc-ide-mode (psc-ide-server-running-p)))
+
 (flycheck-define-generic-checker 'psc-ide
   "A purescript syntax checker using the `psc-ide' interface."
   :start #'psc-ide-flycheck-start
+  :predicate #'psc-ide-flycheck-available-p
   :modes '(purescript-mode))
 
 
