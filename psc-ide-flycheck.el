@@ -104,11 +104,9 @@
   'psc-ide-flycheck-insert-suggestion)
 
 (defun psc-ide-flycheck-copy-related-files (original temp-file)
-  (let ((source-js (concat (file-name-directory original)
-                           (file-name-base original)
+  (let ((source-js (concat (file-name-sans-extension original)
                            ".js"))
-        (target-js (concat (file-name-directory temp-file)
-                           (file-name-base temp-file)
+        (target-js (concat (file-name-sans-extension temp-file)
                            ".js")))
     (when (file-exists-p source-js)
       (copy-file source-js target-js t)
