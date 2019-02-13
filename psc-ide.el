@@ -40,7 +40,8 @@
 ;;;###autoload
 (define-minor-mode psc-ide-mode
   "psc-ide-mode definition"
-  :lighter " psc-ide"
+  :lighter (:eval (concat " psc-ide" (unless (psc-ide-server-running-p)
+                                       (propertize "!" 'face 'error))))
   :keymap (let ((map (make-sparse-keymap)))
             (define-key map (kbd "C-c C-s") 'psc-ide-server-start)
             (define-key map (kbd "C-c C-q") 'psc-ide-server-quit)
@@ -457,9 +458,22 @@ STRING is for use when the search used was with `string-match'."
   (psc-ide-send psc-ide-command-cwd
                 (-compose 'message 'psc-ide-unwrap-result)))
 
+(defconst psc-ide-server-buffer-name "*psc-ide-server*"
+  "Name of the buffer in which the IDE server process should run.")
+
 (defun psc-ide-server-start-impl (dir-name &optional globs)
   "Start psc-ide server in DIR-NAME with the given source GLOBS."
-  (apply 'start-process "*psc-ide-server*" "*psc-ide-server*" (psc-ide-server-command dir-name globs)))
+  (apply 'start-process
+         "server"
+         psc-ide-server-buffer-name
+         (psc-ide-server-command dir-name globs)))
+
+(defun psc-ide-server-running-p ()
+  "Return non-nil if the server is running."
+  (let ((buffer (get-buffer "*psc-ide-server*")))
+    (when buffer
+      (let ((proc (get-buffer-process buffer)))
+        (and proc (process-live-p proc))))))
 
 (defun psc-ide-server-command (dir-name &optional globs)
   "Build a shell command to start 'purs ide' in directory DIR-NAME.
