@@ -587,7 +587,7 @@ contain eventual qualifiers.  MANUAL is as per
 If MANUAL is set, do not filter with the currently imported modules.
 CALLBACK receives the asynchronously retrieved completions."
   (let ((command (psc-ide-build-completion-command prefix manual))
-        (handler (-partial 'psc-ide-handle-completionresponse callback)))
+        (handler (-partial 'psc-ide-handle-completionresponse prefix callback)))
     (psc-ide-send command handler)))
 
 (defun psc-ide-split-qualifier (s)
@@ -673,17 +673,17 @@ reparse if PARSED-IMPORTS is passed."
               (when (equal module (cdr (assoc 'module import)))
                 (cdr (assoc 'qualifier import)))) imports))))
 
-(defun psc-ide-handle-completionresponse (callback response)
-  "Handle a completion response from psc-ide.
+(defun psc-ide-handle-completionresponse (prefix callback response)
+  "Handle a completion response from psc-ide for PREFIX.
 Accepts a CALLBACK and a completion RESPONSE from psc-ide,
 processes the response into a format suitable for company and
 passes it into the callback"
   (let* ((result (psc-ide-unwrap-result response))
-         (completions (-map (-partial 'psc-ide-annotate-completion (psc-ide-parse-imports-in-buffer)) result)))
+         (completions (-map (-partial 'psc-ide-annotate-completion prefix (psc-ide-parse-imports-in-buffer)) result)))
     (funcall callback completions)))
 
-(defun psc-ide-annotate-completion (parsed-imports completion)
-  "Annotate a completion from psc-ide with `text-properties'.
+(defun psc-ide-annotate-completion (prefix parsed-imports completion)
+  "Annotate a completion for PREFIX from psc-ide with `text-properties'.
 PARSED-IMPORTS are used to annotate the COMPLETION with qualifiers."
   (let-alist completion
     (let* ((qualifier (psc-ide-qualifier-for-module .module parsed-imports))
@@ -691,7 +691,7 @@ PARSED-IMPORTS are used to annotate the COMPLETION with qualifiers."
                                  qualifier
                                  ;; Don't add a qualifier if we're already
                                  ;; completing a qualified prefix
-                                 (not (s-contains-p "." (company-grab-symbol))))
+                                 (not (s-contains-p "." prefix)))
                             (format "%s.%s" qualifier .identifier)
                           .identifier)))
 
@@ -699,7 +699,7 @@ PARSED-IMPORTS are used to annotate the COMPLETION with qualifiers."
                                      :module .module
                                      :qualifier qualifier
                                      :documentation .documentation) identifier)
-      ;; add-text-properties is sideeffecting and doesn't return the modified
+      ;; add-text-properties is side-effecting and doesn't return the modified
       ;; string, so we need to explicitly return the identifier from here
       identifier)))
 
