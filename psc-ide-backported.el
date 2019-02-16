@@ -1,6 +1,12 @@
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;; Ported from purescript-mode
+;;; psc-ide-backported.el --- Backported code from purescript-mode -*- lexical-binding: t -*-
+
+;;; Commentary:
+
+;; Code ported from purescript-mode
+
+;;; Code:
+
+(require 'cl-lib)
 
 (defun psc-ide-ident-at-point ()
   "Return the identifier under point, or nil if none found.
@@ -55,3 +61,4 @@ May return a qualified name."
         (cons start end)))))
 
 (provide 'psc-ide-backported)
+;;; psc-ide-backported.el ends here

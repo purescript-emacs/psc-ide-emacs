@@ -1,5 +1,11 @@
-;;; -*- lexical-binding: t -*-
+;;; psc-ide-protocol.el --- Communication with the psc-ide backend -*- lexical-binding: t -*-
+
 ;; License: GNU General Public License version 3, or (at your option) any later version
+
+;;; Commentary:
+
+;;; Code:
+
 (require 'json)
 (require 'dash-functional)
 (require 's)
@@ -202,3 +208,4 @@ Evaluates the CALLBACK in the context of the CURRENT buffer that initiated call 
     (if (string= result-type "error") (error "%s" result) result)))
 
 (provide 'psc-ide-protocol)
+;;; psc-ide-protocol.el ends here
