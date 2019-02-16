@@ -89,19 +89,17 @@ Evaluates the CALLBACK in the context of the CURRENT buffer that initiated call 
 (defun psc-ide-command-show-type (filters search &optional module)
   (json-encode
    (list :command "type"
-         :params (-filter #'identity
-                          `(,@(when filters (list :filters filters))
-                            ,@(when search (list :search search))
-                            ,@(when module (list :currentModule module)))))))
+         :params (append (when filters (list :filters filters))
+                         (when search (list :search search))
+                         (when module (list :currentModule module))))))
 
 (defun psc-ide-command-complete (filters &optional matcher module options)
   (json-encode
    (list :command "complete"
-         :params (-filter #'identity
-                          `(,@(when filters (list :filters filters))
-                            ,@(when matcher (list :matcher matcher))
-                            ,@(when module (list :currentModule module))
-                            ,@(when options (list :options options)))))))
+         :params (append (when filters (list :filters filters))
+                         (when matcher (list :matcher matcher))
+                         (when module (list :currentModule module))
+                         (when options (list :options options))))))
 
 (defun psc-ide-command-case-split (line begin end type)
   (json-encode
@@ -145,9 +143,8 @@ Evaluates the CALLBACK in the context of the CURRENT buffer that initiated call 
 (defun psc-ide-command-rebuild (&optional filepath actualFile)
   (json-encode
    (list :command "rebuild"
-         :params (-filter #'identity
-                          `(,@(list :file (or filepath (buffer-file-name)))
-                            ,@(when actualFile (list :actualFile actualFile)))))))
+         :params (append (list :file (or filepath (buffer-file-name)))
+                         (when actualFile (list :actualFile actualFile))))))
 
 (defun psc-ide-command-list-imports (&optional filepath)
   (json-encode
@@ -197,9 +194,8 @@ Evaluates the CALLBACK in the context of the CURRENT buffer that initiated call 
                                             :maxDist max-dist)))
 
 (defun psc-ide-completion-options (&optional max-results group-reexports)
-  (-filter #'identity
-           `(,@(when max-results (list :maxResults max-results))
-             ,@(when group-reexports (list :groupReexports group-reexports)))))
+  (append (when max-results (list :maxResults max-results))
+          (when group-reexports (list :groupReexports group-reexports))))
 
 (defun psc-ide-unwrap-result (res)
   "Unwraps the result from psc-ide and in case of an error throws it"
