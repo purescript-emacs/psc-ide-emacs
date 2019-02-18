@@ -252,7 +252,7 @@ COMMAND, ARG and IGNORED correspond to the standard company backend API."
      ('("psc-package.json") (psc-ide--psc-package-globs))
      ('("bower.json") (psc-ide--bower-globs))
      ('("spago.dhall") (psc-ide--spago-globs))
-     (_
+     (found-package-files
       (message
        (concat "Detected multiple project files: "
                (mapconcat 'identity found-package-files ", ")))
