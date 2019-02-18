@@ -812,7 +812,7 @@ on whether WARN is true.  Optionally EXPANDs type synonyms."
 (cl-defmethod xref-backend-identifier-completion-table ((_backend (eql psc-ide)))
   nil)
 
-(cl-defmethod xref-backend-definitions ((_backend (eql psc-ide)) symbol)
+(cl-defmethod xref-backend-definitions ((_backend (eql psc-ide)) _symbol)
   nil)
 
 (cl-defmethod xref-backend-references ((_backend (eql psc-ide)) symbol)
