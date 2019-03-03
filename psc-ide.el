@@ -40,7 +40,7 @@
 ;;;###autoload
 (define-minor-mode psc-ide-mode
   "psc-ide-mode definition"
-  :lighter (:eval (concat " psc-ide" (unless (psc-ide-server-running-p) "!")))
+  :lighter (:eval (concat " psc-ide" (unless psc-ide-server-running "!")))
   :keymap (let ((map (make-sparse-keymap)))
             (define-key map (kbd "C-c C-s") 'psc-ide-server-start)
             (define-key map (kbd "C-c C-q") 'psc-ide-server-quit)
@@ -57,6 +57,7 @@
   (if psc-ide-mode
       (progn
         (setq-local company-tooltip-align-annotations t)
+        (setq-local psc-ide-server-running t)
         (add-hook 'after-save-hook 'psc-ide-rebuild-on-save-hook nil t))
     (remove-hook 'after-save-hook 'psc-ide-rebuild-on-save-hook t)))
 
@@ -190,7 +191,11 @@ Defaults to \"output/\" and should only be changed with
 COMMAND, ARG and IGNORED correspond to the standard company backend API."
   (interactive (list 'interactive))
 
-  (when (and psc-ide-mode (psc-ide-server-running-p))
+  (when (and psc-ide-mode
+             ;; Don't complete as the user types when we think the
+             ;; server isn't available, but do try if they explicitly
+             ;; requested the completion
+             (or company--manual-action psc-ide-server-running))
     (cl-case command
       (interactive (company-begin-backend 'company-psc-ide-backend))
 
@@ -234,6 +239,7 @@ COMMAND, ARG and IGNORED correspond to the standard company backend API."
   (let ((default-directory root))
     (psc-ide-server-start-impl root (unless psc-ide-force-user-globs
                                       (psc-ide--server-start-globs))))
+  (setq-local psc-ide-server-running t)
   (run-at-time "1 sec" nil 'psc-ide-load-all))
 
 (defun psc-ide-server-quit ()
@@ -398,7 +404,7 @@ ERROR-TYPE is either \"error\" or \"warning\" and gets displayed with the RAW-ME
 
 (defun psc-ide-show-type-eldoc ()
   "Show type of the symbol under cursor, but be quiet about failures."
-  (when (psc-ide-server-running-p)
+  (when psc-ide-server-running
     (psc-ide-show-type-impl (psc-ide-ident-at-point))))
 
 (defun psc-ide-case-split-impl (type)
@@ -466,13 +472,6 @@ STRING is for use when the search used was with `string-match'."
          "server"
          psc-ide-server-buffer-name
          (psc-ide-server-command dir-name globs)))
-
-(defun psc-ide-server-running-p ()
-  "Return non-nil if the server is running."
-  (let ((buffer (get-buffer "*psc-ide-server*")))
-    (when buffer
-      (let ((proc (get-buffer-process buffer)))
-        (and proc (process-live-p proc))))))
 
 (defun psc-ide-server-command (dir-name &optional globs)
   "Build a shell command to start 'purs ide' in directory DIR-NAME.

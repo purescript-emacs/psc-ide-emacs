@@ -30,8 +30,10 @@
                 (setq timed-out t))))
 
           (delete-process proc)
+          (setq-local psc-ide-server-running t)
           (json-read-from-string (-first-item (s-lines (buffer-string)))))
       (error
+       (setq-local psc-ide-server-running nil)
        (error
         (s-join " "
                 '("It seems like the server is not running. You can"
@@ -52,6 +54,7 @@
       (error
        (progn
          (kill-buffer buffer)
+         (setq-local psc-ide-server-running nil)
          (error
           (s-join " "
                   '("It seems like the server is not running. You can"
@@ -68,6 +71,7 @@ Evaluates the CALLBACK in the context of the CURRENT buffer that initiated call 
         (kill-buffer buffer)
         (when (buffer-live-p current)
           (with-current-buffer current
+            (setq-local psc-ide-server-running t)
             (funcall callback parsed))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

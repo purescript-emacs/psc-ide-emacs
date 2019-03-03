@@ -131,7 +131,7 @@ CALLBACK is the status callback passed by flycheck."
 
 (defun psc-ide-flycheck-available-p ()
   "Return non-nil if we can use the psc-ide flycheck backend in this buffer."
-  (and psc-ide-mode (psc-ide-server-running-p)))
+  (and psc-ide-mode psc-ide-server-running))
 
 (flycheck-define-generic-checker 'psc-ide
   "A purescript syntax checker using the `psc-ide' interface."
