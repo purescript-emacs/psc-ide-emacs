@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 2019-03-03 Automatically turn off completion, type on hover, and flycheck if server isn't running
+
+- To figure out if the server isn't running we remember if the last
+  connection attempt failed. By triggering an explicit request (asking
+  for a type explicitly/go-to-definition/manual autocompletion) you
+  can force a re-check for an externally started server. Running
+  `psc-ide-server-start` also resets the behaviour.
+
 ## 2019-01-22 Detect and handle spago projects
 
 ## 2019-01-15 No longer uses shell-expansion when calling the psc-package command
