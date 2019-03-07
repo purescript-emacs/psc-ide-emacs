@@ -40,7 +40,7 @@
 ;;;###autoload
 (define-minor-mode psc-ide-mode
   "psc-ide-mode definition"
-  :lighter (:eval (concat " psc-ide" (unless psc-ide-server-running "!")))
+  :lighter (:eval (concat " psc-ide" (unless (psc-ide-server-running-p) "!")))
   :keymap (let ((map (make-sparse-keymap)))
             (define-key map (kbd "C-c C-s") 'psc-ide-server-start)
             (define-key map (kbd "C-c C-q") 'psc-ide-server-quit)
@@ -195,7 +195,7 @@ COMMAND, ARG and IGNORED correspond to the standard company backend API."
              ;; Don't complete as the user types when we think the
              ;; server isn't available, but do try if they explicitly
              ;; requested the completion
-             (or company--manual-action psc-ide-server-running))
+             (or company--manual-action (psc-ide-server-running-p)))
     (cl-case command
       (interactive (company-begin-backend 'company-psc-ide-backend))
 
@@ -404,7 +404,7 @@ ERROR-TYPE is either \"error\" or \"warning\" and gets displayed with the RAW-ME
 
 (defun psc-ide-show-type-eldoc ()
   "Show type of the symbol under cursor, but be quiet about failures."
-  (when psc-ide-server-running
+  (when (psc-ide-server-running-p)
     (psc-ide-show-type-impl (psc-ide-ident-at-point))))
 
 (defun psc-ide-case-split-impl (type)
@@ -472,6 +472,10 @@ STRING is for use when the search used was with `string-match'."
          "server"
          psc-ide-server-buffer-name
          (psc-ide-server-command dir-name globs)))
+
+(defun psc-ide-server-running-p ()
+  "Return non-nil if we're assuming the server is running."
+  psc-ide-server-running)
 
 (defun psc-ide-server-command (dir-name &optional globs)
   "Build a shell command to start 'purs ide' in directory DIR-NAME.
