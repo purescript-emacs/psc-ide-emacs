@@ -7,7 +7,6 @@
 ;;; Code:
 
 (require 'json)
-(require 'dash-functional)
 (require 's)
 
 (defun psc-ide-send-sync (cmd)
@@ -31,7 +30,7 @@
 
           (delete-process proc)
           (setq-local psc-ide-server-running t)
-          (json-read-from-string (-first-item (s-lines (buffer-string)))))
+          (json-read-from-string (car (s-lines (buffer-string)))))
       (error
        (setq-local psc-ide-server-running nil)
        (error
@@ -48,7 +47,7 @@
                      :family 'ipv4
                      :host psc-ide-host
                      :service psc-ide-port
-                     :sentinel (-partial 'psc-ide-wrap-callback callback buffer (current-buffer)))))
+                     :sentinel (apply-partially 'psc-ide-wrap-callback callback buffer (current-buffer)))))
           (process-send-string proc (s-prepend cmd "\n")))
       ;; Catch all the errors that happen when trying to connect
       (error

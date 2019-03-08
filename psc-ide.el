@@ -553,8 +553,8 @@ If supplied, GLOBS are the source file globs for this project."
     (if (not (stringp result))
         (let ((selection
                (completing-read "Which Module to import from: "
-                                (-map (lambda (x)
-                                        (cdr (assoc 'module x))) result))))
+                                (seq-map (lambda (x)
+                                           (cdr (assoc 'module x))) result))))
           (psc-ide-add-import-impl identifier (vector (psc-ide-filter-modules (vector selection)))))
       (progn (message "Added import for %s" identifier)
              (save-restriction
@@ -588,14 +588,14 @@ We ignore the prefix we get from company, because it doesn't
 contain eventual qualifiers.  MANUAL is as per
 `psc-ide-complete-async'."
   (let ((prefix (company-grab-symbol)))
-    `(:async . ,(-partial 'psc-ide-complete-async prefix manual))))
+    `(:async . ,(apply-partially 'psc-ide-complete-async prefix manual))))
 
 (defun psc-ide-complete-async (prefix manual callback)
   "Sends a completion command for PREFIX to purs ide.
 If MANUAL is set, do not filter with the currently imported modules.
 CALLBACK receives the asynchronously retrieved completions."
   (let ((command (psc-ide-build-completion-command prefix manual))
-        (handler (-partial 'psc-ide-handle-completionresponse prefix callback)))
+        (handler (apply-partially 'psc-ide-handle-completionresponse prefix callback)))
     (psc-ide-send command handler)))
 
 (defun psc-ide-split-qualifier (s)
@@ -661,7 +661,7 @@ The cases we have to cover:
 
 (defun psc-ide-all-imported-modules ()
   "Retrieve all imported modules for a buffer."
-  (-map (lambda (import) (cdr (assoc 'module import)))
+  (seq-map (lambda (import) (cdr (assoc 'module import)))
         (psc-ide-parse-imports-in-buffer)))
 
 (defun psc-ide-modules-for-qualifier (qualifier)
@@ -676,7 +676,7 @@ The cases we have to cover:
 Return nil if the module is not imported qualified.  Does not
 reparse if PARSED-IMPORTS is passed."
   (let ((imports (or parsed-imports (psc-ide-parse-imports-in-buffer))))
-    (-first-item
+    (car
      (-keep (lambda (import)
               (when (equal module (cdr (assoc 'module import)))
                 (cdr (assoc 'qualifier import)))) imports))))
@@ -687,7 +687,7 @@ Accepts a CALLBACK and a completion RESPONSE from psc-ide,
 processes the response into a format suitable for company and
 passes it into the callback"
   (let* ((result (psc-ide-unwrap-result response))
-         (completions (-map (-partial 'psc-ide-annotate-completion prefix (psc-ide-parse-imports-in-buffer)) result)))
+         (completions (seq-map (apply-partially 'psc-ide-annotate-completion prefix (psc-ide-parse-imports-in-buffer)) result)))
     (funcall callback completions)))
 
 (defun psc-ide-annotate-completion (prefix parsed-imports completion)
