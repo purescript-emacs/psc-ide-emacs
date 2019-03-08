@@ -48,7 +48,7 @@
                      :family 'ipv4
                      :host psc-ide-host
                      :service psc-ide-port
-                     :sentinel (-partial 'wrap-psc-ide-callback callback buffer (current-buffer)))))
+                     :sentinel (-partial 'psc-ide-wrap-callback callback buffer (current-buffer)))))
           (process-send-string proc (s-prepend cmd "\n")))
       ;; Catch all the errors that happen when trying to connect
       (error
@@ -60,7 +60,7 @@
                   '("It seems like the server is not running. You can"
                     "start it using psc-ide-server-start."))))))))
 
-(defun wrap-psc-ide-callback (callback buffer current proc status)
+(defun psc-ide-wrap-callback (callback buffer current proc status)
   "Wraps a function that expects a parsed psc-ide response.
 Evaluates the CALLBACK in the context of the CURRENT buffer that initiated call if it still exists."
   (when (string= "closed" (process-status proc))
