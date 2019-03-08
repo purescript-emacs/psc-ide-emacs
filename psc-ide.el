@@ -473,6 +473,11 @@ STRING is for use when the search used was with `string-match'."
          psc-ide-server-buffer-name
          (psc-ide-server-command dir-name globs)))
 
+(defvar psc-ide-server-running t
+  "When non-nil, the server is assumed to be running.
+This may later turn out not to be the case, in which case this
+variable will be toggled.")
+
 (defun psc-ide-server-running-p ()
   "Return non-nil if we're assuming the server is running."
   psc-ide-server-running)
