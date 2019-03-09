@@ -40,7 +40,7 @@
 ;;;###autoload
 (define-minor-mode psc-ide-mode
   "psc-ide-mode definition"
-  :lighter (:eval (concat " psc-ide" (unless (psc-ide-server-running-p) "[STOPPED]")))
+  :lighter (:eval (concat " psc-ide" (unless psc-ide-server-running "[STOPPED]")))
   :keymap (let ((map (make-sparse-keymap)))
             (define-key map (kbd "C-c C-s") 'psc-ide-server-start)
             (define-key map (kbd "C-c C-q") 'psc-ide-server-quit)
@@ -471,9 +471,17 @@ STRING is for use when the search used was with `string-match'."
          psc-ide-server-buffer-name
          (psc-ide-server-command dir-name globs)))
 
+(defvar-local psc-ide-server-running nil
+  "Locally track whether the server appears to be running.
+This is updated by `psc-ide-server-running-p', and should
+generally not be depended on. This exists because the mode
+lighter indicates whether the server is running, but it is too
+costly to (potentially) call `psc-ide-server-running-p' very
+frequently.")
+
 (defun psc-ide-server-running-p ()
   "Return non-nil if the server is running."
-  (psc-ide-test-connection))
+  (setq psc-ide-server-running (psc-ide-test-connection)))
 
 (defun psc-ide-server-command (dir-name &optional globs)
   "Build a shell command to start 'purs ide' in directory DIR-NAME.
