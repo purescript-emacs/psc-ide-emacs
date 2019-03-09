@@ -24,12 +24,7 @@ If supplied, SENTINEL is the process state sentinel callback."
   "Return non-nil if the server is reachable."
   (with-temp-buffer
     (ignore-errors
-      (let ((proc (psc-ide--connect (current-buffer))))
-        (unwind-protect
-            ;; The server doesn't like us to disconnect without having
-            ;; made a request, so we ask it something very simple
-            (process-send-string proc (concat psc-ide-command-cwd "\n"))
-          (delete-process proc)))
+      (psc-ide-send psc-ide-command-cwd 'ignore)
       t)))
 
 (defun psc-ide-send-sync (cmd)
