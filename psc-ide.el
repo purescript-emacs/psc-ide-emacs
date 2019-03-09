@@ -40,7 +40,7 @@
 ;;;###autoload
 (define-minor-mode psc-ide-mode
   "psc-ide-mode definition"
-  :lighter (:eval (concat " psc-ide" (unless psc-ide-server-running "[STOPPED]")))
+  :lighter (:eval (concat " psc-ide" psc-ide-modeline-state))
   :keymap (let ((map (make-sparse-keymap)))
             (define-key map (kbd "C-c C-s") 'psc-ide-server-start)
             (define-key map (kbd "C-c C-q") 'psc-ide-server-quit)
@@ -474,17 +474,15 @@ STRING is for use when the search used was with `string-match'."
       (apply 'start-process "server" (current-buffer) cmd)
       (special-mode))))
 
-(defvar-local psc-ide-server-running nil
-  "Locally track whether the server appears to be running.
-This is updated by `psc-ide-server-running-p', and should
-generally not be depended on. This exists because the mode
-lighter indicates whether the server is running, but it is too
-costly to (potentially) call `psc-ide-server-running-p' very
-frequently.")
+(defvar-local psc-ide-modeline-state nil
+  "A string for use in the modeline to indicate the server state.
+This is updated by `psc-ide-server-running-p'.")
 
 (defun psc-ide-server-running-p ()
   "Return non-nil if the server is running."
-  (setq psc-ide-server-running (psc-ide-test-connection)))
+  (let ((running (psc-ide-test-connection)))
+    (setq psc-ide-modeline-state (if running "" "[STOPPED]"))
+    running))
 
 (defun psc-ide-server-command (dir-name &optional globs)
   "Build a shell command to start 'purs ide' in directory DIR-NAME.
