@@ -466,10 +466,13 @@ STRING is for use when the search used was with `string-match'."
 
 (defun psc-ide-server-start-impl (dir-name &optional globs)
   "Start psc-ide server in DIR-NAME with the given source GLOBS."
-  (apply 'start-process
-         "server"
-         psc-ide-server-buffer-name
-         (psc-ide-server-command dir-name globs)))
+  (let ((cmd (psc-ide-server-command dir-name globs)))
+    (with-current-buffer (get-buffer-create psc-ide-server-buffer-name)
+      (let ((previous (get-buffer-process (current-buffer))))
+        (when (and previous (process-live-p previous))
+          (kill-process previous)))
+      (apply 'start-process "server" (current-buffer) cmd)
+      (special-mode))))
 
 (defvar-local psc-ide-server-running nil
   "Locally track whether the server appears to be running.
