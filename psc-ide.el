@@ -40,7 +40,7 @@
 ;;;###autoload
 (define-minor-mode psc-ide-mode
   "psc-ide-mode definition"
-  :lighter (:eval (concat " psc-ide" (unless (psc-ide-server-running-p) "!")))
+  :lighter (:eval (concat " psc-ide" (unless (psc-ide-server-running-p) "[STOPPED]")))
   :keymap (let ((map (make-sparse-keymap)))
             (define-key map (kbd "C-c C-s") 'psc-ide-server-start)
             (define-key map (kbd "C-c C-q") 'psc-ide-server-quit)
