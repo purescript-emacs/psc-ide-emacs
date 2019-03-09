@@ -9,15 +9,28 @@
 (require 'json)
 (require 's)
 
+(defun psc-ide--connect (buffer &optional sentinel)
+  "Return a network process in the BUFFER connected to the IDE server.
+If supplied, SENTINEL is the process state sentinel callback."
+  (make-network-process
+   :name "psc-ide-server"
+   :buffer buffer
+   :family 'ipv4
+   :host psc-ide-host
+   :service psc-ide-port
+   :sentinel sentinel))
+
+(defun psc-ide-test-connection ()
+  "Return non-nil if the server is reachable."
+  (with-temp-buffer
+    (ignore-errors
+      (delete-process (psc-ide--connect (current-buffer)))
+      t)))
+
 (defun psc-ide-send-sync (cmd)
   (with-temp-buffer
     (condition-case err
-        (let ((proc (make-network-process
-                     :name "psc-ide-server"
-                     :buffer (buffer-name (current-buffer))
-                     :family 'ipv4
-                     :host psc-ide-host
-                     :service psc-ide-port)))
+        (let ((proc (psc-ide--connect (current-buffer))))
           (process-send-string proc (s-prepend cmd "\n"))
 
           (let ((timed-out nil))
@@ -29,35 +42,20 @@
                 (setq timed-out t))))
 
           (delete-process proc)
-          (setq-local psc-ide-server-running t)
           (json-read-from-string (car (s-lines (buffer-string)))))
       (error
-       (setq-local psc-ide-server-running nil)
-       (error
-        (s-join " "
-                '("It seems like the server is not running. You can"
-                  "start it using psc-ide-server-start.")))))))
+       (error "Couldn't connect to IDE server: you can start it using psc-ide-server-start.")))))
 
 (defun psc-ide-send (cmd callback)
   (let ((buffer (generate-new-buffer "*psc-ide-network-proc*")))
     (condition-case err
-        (let ((proc (make-network-process
-                     :name "psc-ide-server"
-                     :buffer buffer
-                     :family 'ipv4
-                     :host psc-ide-host
-                     :service psc-ide-port
-                     :sentinel (apply-partially 'psc-ide-wrap-callback callback buffer (current-buffer)))))
+        (let ((proc (psc-ide--connect buffer (apply-partially 'psc-ide-wrap-callback callback buffer (current-buffer)))))
           (process-send-string proc (s-prepend cmd "\n")))
       ;; Catch all the errors that happen when trying to connect
       (error
        (progn
          (kill-buffer buffer)
-         (setq-local psc-ide-server-running nil)
-         (error
-          (s-join " "
-                  '("It seems like the server is not running. You can"
-                    "start it using psc-ide-server-start."))))))))
+         (error "Couldn't connect to IDE server: you can start it using psc-ide-server-start."))))))
 
 (defun psc-ide-wrap-callback (callback buffer current proc status)
   "Wraps a function that expects a parsed psc-ide response.
@@ -67,11 +65,10 @@ Evaluates the CALLBACK in the context of the CURRENT buffer that initiated call 
            (with-current-buffer buffer
              (json-read-from-string
               (buffer-substring (point-min) (point-max))))))
-        (kill-buffer buffer)
-        (when (buffer-live-p current)
-          (with-current-buffer current
-            (setq-local psc-ide-server-running t)
-            (funcall callback parsed))))))
+      (kill-buffer buffer)
+      (when (buffer-live-p current)
+        (with-current-buffer current
+          (funcall callback parsed))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;

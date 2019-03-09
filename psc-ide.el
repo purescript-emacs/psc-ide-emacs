@@ -57,7 +57,6 @@
   (if psc-ide-mode
       (progn
         (setq-local company-tooltip-align-annotations t)
-        (setq-local psc-ide-server-running t)
         (add-hook 'after-save-hook 'psc-ide-rebuild-on-save-hook nil t))
     (remove-hook 'after-save-hook 'psc-ide-rebuild-on-save-hook t)))
 
@@ -239,7 +238,6 @@ COMMAND, ARG and IGNORED correspond to the standard company backend API."
   (let ((default-directory root))
     (psc-ide-server-start-impl root (unless psc-ide-force-user-globs
                                       (psc-ide--server-start-globs))))
-  (setq-local psc-ide-server-running t)
   (run-at-time "1 sec" nil 'psc-ide-load-all))
 
 (defun psc-ide-server-quit ()
@@ -473,14 +471,9 @@ STRING is for use when the search used was with `string-match'."
          psc-ide-server-buffer-name
          (psc-ide-server-command dir-name globs)))
 
-(defvar psc-ide-server-running t
-  "When non-nil, the server is assumed to be running.
-This may later turn out not to be the case, in which case this
-variable will be toggled.")
-
 (defun psc-ide-server-running-p ()
-  "Return non-nil if we're assuming the server is running."
-  psc-ide-server-running)
+  "Return non-nil if the server is running."
+  (psc-ide-test-connection))
 
 (defun psc-ide-server-command (dir-name &optional globs)
   "Build a shell command to start 'purs ide' in directory DIR-NAME.
