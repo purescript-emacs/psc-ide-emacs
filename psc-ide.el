@@ -57,6 +57,7 @@
   (if psc-ide-mode
       (progn
         (setq-local company-tooltip-align-annotations t)
+        (setq-local eldoc-documentation-function #'psc-ide-show-type-eldoc)
         (add-hook 'after-save-hook 'psc-ide-rebuild-on-save-hook nil t))
     (remove-hook 'after-save-hook 'psc-ide-rebuild-on-save-hook t)))
 
@@ -174,12 +175,6 @@ Defaults to \"output/\" and should only be changed with
   (when psc-ide-rebuild-on-save
     (psc-ide-rebuild)))
 
-(defun psc-ide-init ()
-  "Initialization for psc-ide-mode."
-  (interactive)
-  (add-function :before-until (local 'eldoc-documentation-function)
-                #'psc-ide-show-type-eldoc))
-
 (with-eval-after-load 'flycheck
   (unless psc-ide-disable-flycheck
     (require 'psc-ide-flycheck)
@@ -197,8 +192,6 @@ COMMAND, ARG and IGNORED correspond to the standard company backend API."
              (or company--manual-action (psc-ide-server-running-p)))
     (cl-case command
       (interactive (company-begin-backend 'company-psc-ide-backend))
-
-      (init (psc-ide-init))
 
       (prefix (unless (company-in-string-or-comment)
                 (let ((symbol (company-grab-symbol)))
