@@ -176,9 +176,8 @@ Defaults to \"output/\" and should only be changed with
     (psc-ide-rebuild)))
 
 (with-eval-after-load 'flycheck
-  (unless psc-ide-disable-flycheck
-    (require 'psc-ide-flycheck)
-    (psc-ide-flycheck-setup)))
+  (require 'psc-ide-flycheck)
+  (psc-ide-flycheck-setup))
 
 (defun company-psc-ide-backend (command &optional arg &rest ignored)
   "The psc-ide backend for `company-mode'.
