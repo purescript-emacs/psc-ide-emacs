@@ -141,7 +141,10 @@ Defaults to \"output/\" and should only be changed with
   :type 'boolean)
 
 (defcustom psc-ide-rebuild-on-save nil
-  "Whether to rebuild files on save and display errors/warnings in a buffer."
+  "Whether to rebuild files on save and display errors/warnings in a buffer.
+If you are using the psc-ide flycheck backend, this setting is
+generally redundant, because flycheck will be rebuilding your
+files."
   :group 'psc-ide
   :type 'boolean)
 
