@@ -59,6 +59,7 @@
         (setq-local company-tooltip-align-annotations t)
         (setq-local eldoc-documentation-function #'psc-ide-show-type-eldoc)
         (add-hook 'after-save-hook 'psc-ide-rebuild-on-save-hook nil t))
+    (kill-local-variable 'eldoc-documentation-function)
     (remove-hook 'after-save-hook 'psc-ide-rebuild-on-save-hook t)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
