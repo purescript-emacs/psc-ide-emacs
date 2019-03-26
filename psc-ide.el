@@ -467,7 +467,8 @@ STRING is for use when the search used was with `string-match'."
       (let ((previous (get-buffer-process (current-buffer))))
         (when (and previous (process-live-p previous))
           (kill-process previous)))
-      (apply 'start-process "server" (current-buffer) cmd)
+      (let ((proc (apply 'start-process "server" (current-buffer) cmd)))
+        (set-process-query-on-exit-flag proc nil))
       (special-mode))))
 
 (defvar-local psc-ide-modeline-state nil
