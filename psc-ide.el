@@ -311,6 +311,7 @@ CMD-ALIST is a command name and its arguments, e.g. ((\"cmd\" . \"psc-package\")
 (defun psc-ide-load-all ()
   "Load all modules in the current project."
   (interactive)
+  (message "Loading all modules. This may take a while.")
   (psc-ide-send psc-ide-command-load-all
                 (-compose 'message 'psc-ide-unwrap-result)))
 
