@@ -189,7 +189,7 @@ files."
 (defun psc-ide-reload-on-save-hook()
   "Reloads the current module on save."
   (when psc-ide-reload-on-save
-    (psc-ide-load-module (psc-ide-get-module-name))))
+    (psc-ide-load-single-module (psc-ide-get-module-name))))
 
 (with-eval-after-load 'flycheck
   (require 'psc-ide-flycheck)
@@ -319,6 +319,11 @@ CMD-ALIST is a command name and its arguments, e.g. ((\"cmd\" . \"psc-package\")
   "Load module with MODULE-NAME."
   (interactive (list (read-string "Module: " (psc-ide-get-module-name))))
   (psc-ide-load-module-impl module-name))
+
+(defun psc-ide-load-single-module (module-name)
+  "Load module with MODULE-NAME."
+  (interactive (list (read-string "Module: " (psc-ide-get-module-name))))
+  (psc-ide-load-single-module-impl module-name))
 
 (defun psc-ide-load-all ()
   "Load all modules in the current project."
@@ -553,6 +558,12 @@ If supplied, GLOBS are the source file globs for this project."
   (psc-ide-unwrap-result
    (psc-ide-send-sync (psc-ide-command-load
                        [] (list module-name)))))
+
+(defun psc-ide-load-single-module-impl (module-name)
+  "Load a single PureScript module with MODULE-NAME"
+  (psc-ide-unwrap-result
+   (psc-ide-send-sync (psc-ide-command-load
+                       (list module-name) [] ))))
 
 (defun psc-ide-add-import-impl (identifier &optional filters)
   "Invoke the addImport command for IDENTIFIER with the given FILTERS."
