@@ -58,9 +58,11 @@
       (progn
         (setq-local company-tooltip-align-annotations t)
         (setq-local eldoc-documentation-function #'psc-ide-show-type-eldoc)
-        (add-hook 'after-save-hook 'psc-ide-rebuild-on-save-hook nil t))
+        (add-hook 'after-save-hook 'psc-ide-rebuild-on-save-hook nil t)
+        (add-hook 'after-save-hook 'psc-ide-reload-on-save-hook nil t))
     (kill-local-variable 'eldoc-documentation-function)
-    (remove-hook 'after-save-hook 'psc-ide-rebuild-on-save-hook t)))
+    (remove-hook 'after-save-hook 'psc-ide-rebuild-on-save-hook t)
+    (remove-hook 'after-save-hook 'psc-ide-reload-on-save-hook t)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -148,6 +150,11 @@ files."
   :group 'psc-ide
   :type 'boolean)
 
+(defcustom psc-ide-reload-on-save nil
+  "Whether to reload files on save."
+  :group 'psc-ide
+  :type 'boolean)
+
 (defcustom psc-ide-disable-flycheck nil
   "Whether to disable flycheck syntax functionality."
   :group 'psc-ide
@@ -178,6 +185,11 @@ files."
   "Rebuilds the current module on save."
   (when psc-ide-rebuild-on-save
     (psc-ide-rebuild)))
+
+(defun psc-ide-reload-on-save-hook()
+  "Reloads the current module on save."
+  (when psc-ide-reload-on-save
+    (psc-ide-load-module (psc-ide-get-module-name))))
 
 (with-eval-after-load 'flycheck
   (require 'psc-ide-flycheck)
