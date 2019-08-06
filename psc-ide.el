@@ -561,9 +561,9 @@ If supplied, GLOBS are the source file globs for this project."
 
 (defun psc-ide-load-single-module-impl (module-name)
   "Load a single PureScript module with MODULE-NAME"
-  (psc-ide-unwrap-result
-   (psc-ide-send-sync (psc-ide-command-load
-                       (list module-name) [] ))))
+  (let ((command (psc-ide-command-load (list module-name) []))
+        (handler (-compose 'message 'psc-ide-unwrap-result)))
+    (psc-ide-send command handler)))
 
 (defun psc-ide-add-import-impl (identifier &optional filters)
   "Invoke the addImport command for IDENTIFIER with the given FILTERS."
