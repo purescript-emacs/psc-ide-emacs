@@ -163,6 +163,14 @@ files."
   :group 'psc-ide
   :type '(repeat string))
 
+(defcustom psc-ide-codegen
+  '("js" "corefn")
+  "Codegen used for compilation.
+Specified the codegen targets the rebuild should produce.
+Uses the same target names as the command line compiler. Defaults to just JS output"
+  :group 'psc-ide
+  :type '(choice string (repeat string)))
+
 (defconst psc-ide-import-regex
   (rx (and line-start "import" (1+ space)
            (group (and (1+ (any word "."))))
