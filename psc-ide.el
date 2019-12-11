@@ -164,7 +164,7 @@ files."
   :type '(repeat string))
 
 (defcustom psc-ide-codegen
-  '("js")
+  '("corefn")
   "Codegen used for compilation.
 Specified the codegen targets the rebuild should produce.
 Uses the same target names as the command line compiler. Defaults to just JS output"
