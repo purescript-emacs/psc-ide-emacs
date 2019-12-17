@@ -143,7 +143,9 @@ Evaluates the CALLBACK in the context of the CURRENT buffer that initiated call 
 (defun psc-ide-command-rebuild (&optional filepath actualFile)
   (json-encode
    (list :command "rebuild"
-         :params (append (list :file (or filepath (buffer-file-name)))
+         :params (append (list
+                          :codegen psc-ide-codegen
+                          :file (or filepath (buffer-file-name)))
                          (when actualFile (list :actualFile actualFile))))))
 
 (defun psc-ide-command-list-imports (&optional filepath)

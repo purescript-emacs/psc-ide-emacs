@@ -38,6 +38,22 @@
    (setq psc-ide-use-npm-bin t)
    #+END_SRC
 
+   If you would like to use a custom codegen target for your rebuild. (default
+   is "js")
+
+   There is a `psc-ide-codegen` option that can be set globally in your user config:
+
+   #+BEGIN_SRC elisp
+   (setq psc-ide-codegen '("corefn"))
+   #+END_SRC
+
+   or in specific files by addind this to the top of file:
+
+   #+BEGIN_SRC elisp
+   -- -*- psc-ide-codegen: ("corefn") -*-
+   #+END_SRC
+
+
 ** Usage
 
 *** Start the Server ~C-c C-s~
