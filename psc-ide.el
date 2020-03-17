@@ -546,9 +546,9 @@ If supplied, GLOBS are the source file globs for this project."
 
 (defun psc-ide-load-module-impl (module-name)
   "Load a PureScript module with MODULE-NAME and its dependencies."
-  (psc-ide-unwrap-result
-   (psc-ide-send-sync (psc-ide-command-load
-                       [] (list module-name)))))
+  (psc-ide-send (psc-ide-command-load
+                 [] (list module-name))
+                (-compose 'message 'psc-ide-unwrap-result)))
 
 (defun psc-ide-add-import-impl (identifier &optional filters)
   "Invoke the addImport command for IDENTIFIER with the given FILTERS."
