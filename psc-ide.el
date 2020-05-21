@@ -142,7 +142,7 @@ files."
   :group 'psc-ide
   :type  'boolean)
 
-(defcustom psc-ide-editor-mode nil
+(defcustom psc-ide-editor-mode t
   "Whether to only reload files when the editor initiates rebuilds."
   :group 'psc-ide
   :type 'boolean)

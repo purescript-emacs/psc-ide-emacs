@@ -1,5 +1,9 @@
 # CHANGELOG
 
+# 2020-05-21 Uses the --editor-mode flag by default
+
+- It's the better default
+
 ## 2020-05-21 Removes configuration options to use the non-combined binaries
 
 - It's been many years now
