@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 2020-05-21 Removes configuration options to use the non-combined binaries
+
+- It's been many years now
+- Also cleans up some of the documentation and outdated links and references
+
 ## 2019-03-03 Automatically turn off completion, type on hover, and flycheck if server isn't running
 
 - To figure out if the server isn't running we remember if the last

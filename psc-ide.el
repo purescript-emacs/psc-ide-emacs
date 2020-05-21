@@ -1,21 +1,21 @@
-;;; psc-ide.el --- Minor mode for PureScript's psc-ide tool. -*- lexical-binding: t -*-
+;;; psc-ide.el --- Minor mode for PureScript's IDE server. -*- lexical-binding: t -*-
 
-;; Copyright (C) 2017 The psc-ide-emacs authors
+;; Copyright (C) 2020 The psc-ide-emacs authors
 ;; License: GNU General Public License version 3, or (at your option) any later version
 
 
 ;; Author   : Erik Post <erik@shinsetsu.nl>
 ;;            Dmitry Bushenko <d.bushenko@gmail.com>
-;;            Christoph Hegemann
+;;            Christoph Hegemann <christoph.hegemann1337@gmail.com>
 ;;            Brian Sermons
-;; Homepage : https://github.com/epost/psc-ide-emacs
+;; Homepage : https://github.com/purescript-emacs/psc-ide-emacs
 ;; Version  : 0.1.0
 ;; Package-Requires: ((emacs "25") (dash "2.13.0") (dash-functional "1.2.0") (company "0.8.7") (s "1.10.0") (flycheck "0.24") (let-alist "1.0.4") (seq "1.11"))
 ;; Keywords : languages
 
 ;;; Commentary:
 
-;; Emacs integration for PureScript's psc-ide tool
+;; Emacs integration for PureScript's IDE server
 
 ;;; Code:
 
@@ -71,11 +71,6 @@
   :prefix "psc-ide-"
   :group 'languages)
 
-(defcustom psc-ide-server-executable "psc-ide-server"
-  "Path to the 'psc-ide-server' executable."
-  :group 'psc-ide
-  :type 'string)
-
 (defcustom psc-ide-purs-executable "purs"
   "Path to the 'purs' executable."
   :group 'psc-ide
@@ -85,12 +80,6 @@
   "Whether to use 'npm bin' to determine the location of the psc ide server."
   :group 'psc-ide
   :type  'boolean)
-
-(defcustom psc-ide-use-purs t
-  "When non-nil, use 'purs ide' to start psc ide server.
-Otherwise, fall back to use old psc-ide-server."
-  :group 'psc-ide
-  :type 'boolean)
 
 (defcustom psc-ide-port 4242
   "The port that psc-ide-server uses."
@@ -126,7 +115,7 @@ Defaults to \"output/\" and should only be changed with
   :type  'string)
 
 (defcustom psc-ide-debug nil
-  "Whether psc-ide-server should be started with the debug flag."
+  "Makes the server print debug diagnostics into its process buffer."
   :group 'psc-ide
   :type  'boolean)
 
@@ -283,11 +272,11 @@ COMMAND, ARG and IGNORED correspond to the standard company backend API."
      ("args" . ("sources")))))
 
 (defun psc-ide--bower-globs ()
-  "Add file globs for spago projects."
+  "Add file globs for bower projects."
   '("bower_components/purescript-*/src/**/*.purs"))
 
 (defun psc-ide--parse-globs (results errors cmd-alist)
-  "Return the printed by a command.
+  "Return the globs printed by a command.
 RESULTS and ERRORS are buffer names.
 CMD-ALIST is a command name and its arguments, e.g. ((\"cmd\" . \"psc-package\") (\"args\" . (\"sources\")))"
   (let (server-globs
@@ -497,14 +486,10 @@ and passed to `start-process`.
 
 If supplied, GLOBS are the source file globs for this project."
   (let* ((path (psc-ide-executable-path))
-         (cmd (if psc-ide-use-purs
-                  `(,path "ide" "server")
-                `(,path)))
+         (cmd `(,path "ide" "server"))
          (port (number-to-string psc-ide-port))
          (directory (expand-file-name dir-name))
-         (debug-flags (when psc-ide-debug (if psc-ide-use-purs
-                                              '("--log-level" "debug")
-                                            '("--debug"))))
+         (debug-flags (when psc-ide-debug '("--log-level" "debug")))
          (editor-mode (when psc-ide-editor-mode '("--editor-mode")))
          (source-globs (or globs psc-ide-source-globs)))
     (if path
@@ -513,25 +498,17 @@ If supplied, GLOBS are the source file globs for this project."
                             ,@editor-mode
                             ,@debug-flags ,@psc-ide-server-extra-args
                             ,@source-globs))
-      (error (concat "Couldn't locate psc ide executable. You"
-                     " could either customize the psc-ide-purs-executable"
-                     " or psc-ide-server-executable if psc-ide-use-purs is nil,"
-                     " or set the psc-ide-use-npm-bin variable to"
+      (error (concat "Couldn't locate purs executable. You"
+                     " could either customize the psc-ide-purs-executable,"
+                     " set the psc-ide-use-npm-bin variable to"
                      " true, or put the executable on your path.")))))
-
-(defun psc-ide-executable-name ()
-  "Find ide executable name."
-  (if psc-ide-use-purs
-      psc-ide-purs-executable
-    psc-ide-server-executable))
 
 (defun psc-ide-executable-path ()
   "Return the full path to the IDE server executable."
-  (let* ((executable-name (psc-ide-executable-name))
-         (npm-bin-path (if psc-ide-use-npm-bin
-                           (psc-ide-npm-bin-server-executable executable-name)
-                         nil)))
-    (or npm-bin-path (executable-find executable-name))))
+  (let ((npm-bin-path
+         (when psc-ide-use-npm-bin
+             (psc-ide-npm-bin-server-executable psc-ide-purs-executable))))
+    (or npm-bin-path (executable-find psc-ide-purs-executable))))
 
 (defun psc-ide-npm-bin-server-executable (cmd)
   "Find psc-ide server binary CMD of current project by invoking `npm bin`."
