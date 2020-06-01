@@ -77,7 +77,8 @@
   :type  'string)
 
 (defcustom psc-ide-use-npm-bin nil
-  "Whether to use 'npm bin' to determine the location of the psc ide server."
+  "Whether to use 'npm bin' to determine the location of binaries.
+This includes the ide server and package manager binaries like spago."
   :group 'psc-ide
   :type  'boolean)
 
@@ -93,9 +94,9 @@
 
 (defcustom psc-ide-source-globs '("src/**/*.purs" "test/**/*.purs")
   "The source globs for your PureScript source files.
-By default globs for dependencies from bower or psc-package will
-be appended on starting the server.  If you want to override this
-behaviour and force JUST these globs take a look at
+By default globs for dependencies from bower, psc-package, or
+spago will be appended on starting the server. If you want to
+override this behaviour and force JUST these globs take a look at
 `psc-ide-force-user-globs`"
   :group 'psc-ide
   :type  '(repeat string))
@@ -279,9 +280,10 @@ COMMAND, ARG and IGNORED correspond to the standard company backend API."
   "Return the globs printed by a command.
 RESULTS and ERRORS are buffer names.
 CMD-ALIST is a command name and its arguments, e.g. ((\"cmd\" . \"psc-package\") (\"args\" . (\"sources\")))"
-  (let (server-globs
-        (err-file (make-temp-file "psc-ide-globs"))
-        (cmd      (cdr (assoc "cmd" cmd-alist)))
+  (let* (server-globs (err-file (make-temp-file "psc-ide-globs"))
+        (cmd-raw  (cdr (assoc "cmd" cmd-alist)))
+        (npm-cmd  (when psc-ide-use-npm-bin (psc-ide-npm-bin-executable cmd-raw)))
+        (cmd      (or npm-cmd cmd-raw))
         (cmd-args (cdr (assoc "args" cmd-alist))))
     (unwind-protect
         (if (zerop (apply 'call-process cmd nil (list results err-file) nil cmd-args))
@@ -507,14 +509,14 @@ If supplied, GLOBS are the source file globs for this project."
   "Return the full path to the IDE server executable."
   (let ((npm-bin-path
          (when psc-ide-use-npm-bin
-             (psc-ide-npm-bin-server-executable psc-ide-purs-executable))))
+             (psc-ide-npm-bin-executable psc-ide-purs-executable))))
     (or npm-bin-path (executable-find psc-ide-purs-executable))))
 
-(defun psc-ide-npm-bin-server-executable (cmd)
+(defun psc-ide-npm-bin-executable (cmd)
   "Find psc-ide server binary CMD of current project by invoking `npm bin`."
   (let* ((npm-bin (s-trim-right (shell-command-to-string "npm bin")))
-         (server (expand-file-name cmd npm-bin)))
-    (if (and server (file-executable-p server)) server nil)))
+         (binary (expand-file-name cmd npm-bin)))
+    (when (and binary (file-exists-p binary)) binary)))
 
 (defun psc-ide-server-version ()
   "Return the version of the found psc-ide-server executable."
