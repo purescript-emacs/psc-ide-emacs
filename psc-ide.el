@@ -240,21 +240,28 @@ COMMAND, ARG and IGNORED correspond to the standard company backend API."
   (psc-ide-send-sync psc-ide-command-quit))
 
 (defun psc-ide--server-start-globs ()
-  "Detects bower, psc-package and spago projects and determines sensible source globs."
+  "Detects PURS_IDE_SOURCES or package manager setup to set purs ide source globs"
   (append
    psc-ide-source-globs
-   (pcase (seq-filter 'file-exists-p '("psc-package.json" "bower.json" "spago.dhall"))
-     ('()
-      (message "Couldn't find psc-package.json, bower.json nor spago.dhall files, using just the user specified globs.")
-      nil)
-     ('("psc-package.json") (psc-ide--psc-package-globs))
-     ('("bower.json") (psc-ide--bower-globs))
-     ('("spago.dhall") (psc-ide--spago-globs))
-     (found-package-files
-      (message
-       (concat "Detected multiple project files: "
-               (mapconcat 'identity found-package-files ", ")))
-      nil))))
+   (pcase (getenv "PURS_IDE_SOURCES")
+     ((and (pred stringp) globs)
+      (split-string globs "[\r\n\s]+" t))
+     (_ (psc-ide-server-use-package-manager-globs)))))
+
+(defun psc-ide-server-use-package-manager-globs ()
+  "Detects bower, psc-package and spago projects and determines sensible source globs."
+  (pcase (seq-filter 'file-exists-p '("psc-package.json" "bower.json" "spago.dhall"))
+    ('()
+     (message "Couldn't find psc-package.json, bower.json nor spago.dhall files, using just the user specified globs.")
+     nil)
+    ('("psc-package.json") (psc-ide--psc-package-globs))
+    ('("bower.json") (psc-ide--bower-globs))
+    ('("spago.dhall") (psc-ide--spago-globs))
+    (found-package-files
+     (message
+      (concat "Detected multiple project files: "
+              (mapconcat 'identity found-package-files ", ")))
+     nil)))
 
 (defun psc-ide--psc-package-globs ()
   "Add file globs for psc-package projects."
