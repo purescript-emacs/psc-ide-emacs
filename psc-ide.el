@@ -245,6 +245,7 @@ COMMAND, ARG and IGNORED correspond to the standard company backend API."
    psc-ide-source-globs
    (pcase (getenv "PURS_IDE_SOURCES")
      ((and (pred stringp) globs)
+      (message "Using source globs from PURS_IDE_SOURCES")
       (split-string globs "[\r\n\s]+" t))
      (_ (psc-ide-server-use-package-manager-globs)))))
 
