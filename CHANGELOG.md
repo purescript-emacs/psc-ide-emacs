@@ -1,5 +1,9 @@
 # CHANGELOG
 
+# 2023-10-17 Uses `npx` instead of `npm bin` when `psc-ide-use-npm-bin` is set
+- `npm bin` no longer works with node >= 18
+- Also adds detection for the new `spago.yaml` project file
+
 # 2020-05-21 Uses the --editor-mode flag by default
 
 - It's the better default

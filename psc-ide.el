@@ -250,13 +250,14 @@ COMMAND, ARG and IGNORED correspond to the standard company backend API."
 
 (defun psc-ide-server-use-package-manager-globs ()
   "Detects bower, psc-package and spago projects and determines sensible source globs."
-  (pcase (seq-filter 'file-exists-p '("psc-package.json" "bower.json" "spago.dhall"))
+  (pcase (seq-filter 'file-exists-p '("psc-package.json" "bower.json" "spago.dhall" "spago.yaml"))
     ('()
      (message "Couldn't find psc-package.json, bower.json nor spago.dhall files, using just the user specified globs.")
      nil)
     ('("psc-package.json") (psc-ide--psc-package-globs))
     ('("bower.json") (psc-ide--bower-globs))
     ('("spago.dhall") (psc-ide--spago-globs))
+    ('("spago.yaml") (psc-ide--spago-globs))
     (found-package-files
      (message
       (concat "Detected multiple project files: "
@@ -276,8 +277,11 @@ COMMAND, ARG and IGNORED correspond to the standard company backend API."
   (psc-ide--parse-globs
    "*SPAGO SOURCES*"
    "*SPAGO ERRORS*"
-   '(("cmd" . "spago")
-     ("args" . ("sources")))))
+   (if psc-ide-use-npm-bin
+       '(("cmd" . "npx")
+         ("args" . ("spago" "sources")))
+     '(("cmd" . "spago")
+       ("args" . ("sources"))))))
 
 (defun psc-ide--bower-globs ()
   "Add file globs for bower projects."
@@ -288,9 +292,7 @@ COMMAND, ARG and IGNORED correspond to the standard company backend API."
 RESULTS and ERRORS are buffer names.
 CMD-ALIST is a command name and its arguments, e.g. ((\"cmd\" . \"psc-package\") (\"args\" . (\"sources\")))"
   (let* (server-globs (err-file (make-temp-file "psc-ide-globs"))
-        (cmd-raw  (cdr (assoc "cmd" cmd-alist)))
-        (npm-cmd  (when psc-ide-use-npm-bin (psc-ide-npm-bin-executable cmd-raw)))
-        (cmd      (or npm-cmd cmd-raw))
+        (cmd  (cdr (assoc "cmd" cmd-alist)))
         (cmd-args (cdr (assoc "args" cmd-alist))))
     (unwind-protect
         (if (zerop (apply 'call-process cmd nil (list results err-file) nil cmd-args))
@@ -495,7 +497,7 @@ and passed to `start-process`.
 
 If supplied, GLOBS are the source file globs for this project."
   (let* ((path (psc-ide-executable-path))
-         (cmd `(,path "ide" "server"))
+         (cmd `(,@path "ide" "server"))
          (port (number-to-string psc-ide-port))
          (directory (expand-file-name dir-name))
          (debug-flags (when psc-ide-debug '("--log-level" "debug")))
@@ -514,16 +516,9 @@ If supplied, GLOBS are the source file globs for this project."
 
 (defun psc-ide-executable-path ()
   "Return the full path to the IDE server executable."
-  (let ((npm-bin-path
-         (when psc-ide-use-npm-bin
-             (psc-ide-npm-bin-executable psc-ide-purs-executable))))
-    (or npm-bin-path (executable-find psc-ide-purs-executable))))
-
-(defun psc-ide-npm-bin-executable (cmd)
-  "Find psc-ide server binary CMD of current project by invoking `npm bin`."
-  (let* ((npm-bin (s-trim-right (shell-command-to-string "npm bin")))
-         (binary (expand-file-name cmd npm-bin)))
-    (when (and binary (file-exists-p binary)) binary)))
+  (if psc-ide-use-npm-bin
+      '("npx" "purs")
+    (list (executable-find psc-ide-purs-executable))))
 
 (defun psc-ide-server-version ()
   "Return the version of the found psc-ide-server executable."
