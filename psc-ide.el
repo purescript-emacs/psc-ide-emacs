@@ -10,7 +10,7 @@
 ;;            Brian Sermons
 ;; Homepage : https://github.com/purescript-emacs/psc-ide-emacs
 ;; Version  : 0.1.0
-;; Package-Requires: ((emacs "25") (dash "2.18.0") (company "0.8.7") (s "1.10.0") (flycheck "0.24") (let-alist "1.0.4") (seq "1.11"))
+;; Package-Requires: ((emacs "25") (dash "2.18.0") (company "0.8.7") (s "1.10.0") (flycheck "0.24") (let-alist "1.0.4") (seq "1.11") (inheritenv "0.2"))
 ;; Keywords : languages
 
 ;;; Commentary:
@@ -28,6 +28,7 @@
 (require 'cl-lib)
 (require 'dash)
 (require 's)
+(require 'inheritenv)
 (require 'xref)
 (require 'psc-ide-backported)
 (require 'psc-ide-protocol)
@@ -246,7 +247,7 @@ COMMAND, ARG and IGNORED correspond to the standard company backend API."
      ((and (pred stringp) globs)
       (message "Using source globs from PURS_IDE_SOURCES")
       (split-string globs "[\r\n\s]+" t))
-     (_ (psc-ide-server-use-package-manager-globs)))))
+     (_ (inheritenv (psc-ide-server-use-package-manager-globs))))))
 
 (defun psc-ide-server-use-package-manager-globs ()
   "Detects bower, psc-package and spago projects and determines sensible source globs."
